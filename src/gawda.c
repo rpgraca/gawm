@@ -546,7 +546,6 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
       pango_cairo_show_layout(cr, layout);
 
       /* Draw y-values at cursor-wave intersections */
-      GawLabels *lbx = ud->xLabels;
       GawLabels *lby = wp->yLabels;
       GList *list;
       for (list = wp->vwlist; list; list = list->next) {
@@ -563,7 +562,7 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
 
          /* Draw a small dot at the intersection */
          gdk_cairo_set_source_rgba(cr, vw->color);
-         cairo_arc(cr, cx, wy, 3.0, 0, 2 * M_PI);
+         cairo_arc(cr, cx, (double)wy, 3.0, 0, 2 * M_PI);
          cairo_fill(cr);
 
          /* Draw y-value label */
@@ -593,26 +592,55 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
    AWCursor *c0 = ud->cursors[0];
    AWCursor *c1 = ud->cursors[1];
    if (c0->shown && c1->shown) {
-      double delta = c1->xval - c0->xval;
-      char dbuf[128];
-      snprintf(dbuf, sizeof(dbuf), "\xce\x94=%s", val2str(delta, ud->up->scientific));
+      /* 1. X Delta */
+      double dx = c1->xval - c0->xval;
+      char dbuf[256];
+      snprintf(dbuf, sizeof(dbuf), "\xce\x94X=%s", val2str(dx, ud->up->scientific));
       pango_layout_set_text(layout, dbuf, -1);
       pango_layout_get_pixel_size(layout, &tw, &th);
 
-      /* Position delta box between cursors at the top */
       int mid_x = (c0->x + c1->x) / 2;
       int bx = mid_x - tw / 2 - pad;
-      int by = th + 2 * pad + 3; /* below the cursor x-value boxes */
+      int by = th + 2 * pad + 3;
       if (bx < 0) bx = 0;
       if (bx + tw + 2 * pad > w) bx = w - tw - 2 * pad;
 
-      /* Use a blend of both cursor colors - just use cursor 0 color */
       gdk_cairo_set_source_rgba(cr, c0->color);
       cairo_rectangle(cr, bx, by, tw + 2 * pad, th + 2 * pad);
       cairo_fill(cr);
       gdk_cairo_set_source_rgba(cr, ud->bg_color);
       cairo_move_to(cr, bx + pad, by + pad);
       pango_cairo_show_layout(cr, layout);
+
+      /* 2. Y Deltas for each wave */
+      GList *l1;
+      int delta_y_offset = by + th + 2 * pad + 3;
+      
+      for (l1 = wp->vwlist; l1; l1 = l1->next) {
+         VisibleWave *vw1 = (VisibleWave *) l1->data;
+         double y1_c0 = wavevar_interp_value(vw1->var, c0->xval);
+         double y1_c1 = wavevar_interp_value(vw1->var, c1->xval);
+         
+         /* Delta Y for THIS wave between C0 and C1 */
+         double dy = y1_c1 - y1_c0;
+         snprintf(dbuf, sizeof(dbuf), "\xce\x94Y(%s)=%s", vw1->var->varName, val2str(dy, ud->up->scientific));
+         pango_layout_set_text(layout, dbuf, -1);
+         pango_layout_get_pixel_size(layout, &tw, &th);
+         
+         if (delta_y_offset + th + 2 * pad < h) {
+            bx = mid_x - tw / 2 - pad;
+            if (bx < 0) bx = 0;
+            if (bx + tw + 2 * pad > w) bx = w - tw - 2 * pad;
+            
+            gdk_cairo_set_source_rgba(cr, vw1->color);
+            cairo_rectangle(cr, bx, delta_y_offset, tw + 2 * pad, th + 2 * pad);
+            cairo_fill(cr);
+            gdk_cairo_set_source_rgba(cr, ud->bg_color);
+            cairo_move_to(cr, bx + pad, delta_y_offset + pad);
+            pango_cairo_show_layout(cr, layout);
+            delta_y_offset += th + 2 * pad + 2;
+         }
+      }
    }
 
    pango_font_description_free(font_desc);
@@ -896,8 +924,8 @@ da_drawing_button_press_cb (GtkWidget *widget, GdkEventButton *event,
                da_dragged_cursor = near_cursor;
                ud->drag_button = near_cursor + 1; /* cursor 0→button 1, cursor 1→button 2 */
             } else {
-               da_dragged_cursor = -1;
-               ud->drag_button = event->button;
+               da_dragged_cursor = ud->last_dragged_cursor;
+               ud->drag_button = ud->last_dragged_cursor + 1;
             }
             ud->mouseState = M_CURSOR_DRAG;
             da_set_gdk_cursor(widget, GDK_SB_H_DOUBLE_ARROW);

@@ -149,6 +149,7 @@ struct _UserData {
    gint  reqpanels;
    
    AWCursor **cursors;  /* 3 cursor storage pointer */
+   int last_dragged_cursor;  /* index (0 or 1) of the last dragged cursor */
    
    GtkWidget *panelTable;     /* gtk table for panels */
    GList *panelList;          /* list of panels  */

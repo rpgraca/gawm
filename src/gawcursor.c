@@ -56,6 +56,13 @@ void cu_update_xcursor(WavePanel *wp, AWCursor *csp, int x, int redraw)
    GawLabels *lbx = wp->ud->xLabels;
 
    csp->shown = 1;
+   /* Track the last dragged cursor index */
+   if (csp == ud->cursors[0]) {
+      ud->last_dragged_cursor = 0;
+   } else if (csp == ud->cursors[1]) {
+      ud->last_dragged_cursor = 1;
+   }
+   
    int zoom = csp->zoom;
    if ( csp->zoom ) {
       /* put the cursor at prev xval value */
