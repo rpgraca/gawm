@@ -10,6 +10,7 @@
 Makefile
 Makefile.in
 src/gawm
+src/gaw
 src/stest
 lib/stest
 stamp-h1
