@@ -4,6 +4,7 @@
 
 ### Compiling from Source
 ```bash
+autoreconf -fi
 ./configure
 make
 sudo make install
