@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Gawm Gtk Analog Wave viewer
+Comment=Gtk Analog Wave viewer (fork of Gaw)
+Exec=gawm
+Icon=gawm.png
+Terminal=false
+Type=Application
+MimeType=text/plain;
+Categories=GTK;Graphics;
