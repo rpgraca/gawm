@@ -127,6 +127,83 @@ aw_redraw_all_gaction (GSimpleAction *action, GVariant *param, gpointer user_dat
    ap_all_redraw(ud);
 }
 
+void
+aw_python_shell_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
+{
+   UserData *ud = (UserData *) user_data;
+   
+   if ( ! ud->gawio ) {
+      /* Not listening? start on a random port */
+      if ( ud->listenPort == 0 ) ud->listenPort = 0; 
+      aio_create_channel(ud);
+   }
+
+   if ( ud->listenPort ) {
+      char *cwd = getcwd(NULL, 0);
+      GError *error = NULL;
+      gint argc;
+      gchar **term_argv;
+
+      if ( g_shell_parse_argv(ud->up->termCmd, &argc, &term_argv, &error) ) {
+         /* Construct the python command as a single string for -c */
+         char *py_init = g_strdup_printf(
+            "import sys; sys.path.insert(0, '%s/python'); "
+            "import gawm; g=gawm.Gawm(port=%d); g.connect(); "
+            "print('\\nConnected to gawm on port %d'); "
+            "print('Use \"g\" to interact with the viewer.')",
+            cwd, ud->listenPort, ud->listenPort);
+         
+         /* Construct final argv: [term, ..., python3, -i, -c, py_init] */
+         gchar **spawn_argv = g_new0(gchar *, argc + 5);
+         int i;
+         for (i = 0; i < argc; i++) {
+            spawn_argv[i] = term_argv[i];
+         }
+         spawn_argv[argc]   = g_strdup("python3");
+         spawn_argv[argc+1] = g_strdup("-i");
+         spawn_argv[argc+2] = g_strdup("-c");
+         spawn_argv[argc+3] = py_init;
+         spawn_argv[argc+4] = NULL;
+
+         /* Prepare environment */
+         gchar **envp = g_get_environ();
+         char port_str[16];
+         snprintf(port_str, sizeof(port_str), "%d", ud->listenPort);
+         envp = g_environ_setenv(envp, "GAWM_PORT", port_str, TRUE);
+
+         if ( ! g_spawn_async(NULL, spawn_argv, envp, G_SPAWN_SEARCH_PATH, NULL, NULL, NULL, &error) ) {
+            char msg[2560];
+            snprintf(msg, sizeof(msg), 
+                     _("Could not launch terminal emulator: %s\n\n"
+                       "Please set a valid terminal command in your gawrc file using the 'up_termCmd' variable.\n"
+                       "Example: up_termCmd = \"xterm -e\"\n"
+                       "Current value: %s"), 
+                     error->message, ud->up->termCmd);
+            aw_dialog_show(MSG_T_ERROR, msg);
+            g_error_free(error);
+         }
+         
+         /* Clean up */
+         g_strfreev(envp);
+         g_strfreev(term_argv);
+         g_free(py_init);
+         g_free(spawn_argv[argc]);
+         g_free(spawn_argv[argc+1]);
+         g_free(spawn_argv[argc+2]);
+         g_free(spawn_argv);
+      } else {
+         char msg[2560];
+         snprintf(msg, sizeof(msg), 
+                  _("Could not parse terminal command: %s\n\n"
+                    "Current value: %s"), 
+                  error->message, ud->up->termCmd);
+         aw_dialog_show(MSG_T_ERROR, msg);
+         g_error_free(error);
+      }
+      free(cwd);
+   }
+}
+
 static void
 aw_showXlabel_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
@@ -938,6 +1015,11 @@ static const gchar gaw_menubar[] =
 "          <attribute name='accel'>&lt;control&gt;T</attribute>"
 "          <attribute name='icon'>text-x-generic-symbolic</attribute>"
 "        </item>"
+"        <item>"
+"          <attribute name='label' translatable='yes'>Python Shell</attribute>"
+"          <attribute name='action'>gaw.PythonShell</attribute>"
+"          <attribute name='icon'>utilities-terminal-symbolic</attribute>"
+"        </item>"
 "      </section>"
 "    </submenu>"
 "    "
@@ -1016,6 +1098,7 @@ static TooltipInfo menubarTip[] = {
    { "AllowResize", N_("Allow Resize"), N_("Allow Resize the main window"), NULL  },
 
    { "TextAction", N_("Open Text tool..."), N_("Open text tool settings"), NULL  },
+   { "PythonShell", N_("Python Shell"), N_("Open interactive Python shell"), NULL  },
    { "AlgoMenuAction", N_("Algorithm List") , N_("Select an Algorithm from the List"), NULL  },
    { "XConvertAction", N_("X Convert List") , N_("Select a method to covert X values"), NULL  },
    { "About", N_("_About"), N_("About"), NULL  },
@@ -1058,6 +1141,7 @@ static GActionEntry entries[] = {
    { "SetCursor1", cu_cursor_set_cursor1_gaction, NULL, NULL, NULL  },
    { "Open", af_open_file_gaction, NULL, NULL, NULL  },
    { "TextAction", gawtext_new_gaction, NULL, NULL, NULL  },
+   { "PythonShell", aw_python_shell_gaction, NULL, NULL, NULL  },
    { "DeleteWave", aw_delete_all_wave_gaction, NULL, NULL, NULL  },
    { "TDeletePanel", aw_remove_panel_gaction, NULL, NULL, NULL  },
    { "ExportDis", af_export_displayed_gaction, NULL, NULL, NULL  },

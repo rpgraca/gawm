@@ -113,7 +113,9 @@ struct _UserPrefs {
    int input;  /* index of the mixer input */
    char *cardidstr;  /* index of the card '-' for default, '0' ... */
    char *helpCmd;  /* command called for display help */
+   char *termCmd;  /* command called for launching a terminal */
    char *userGuide;  /* Gawm user guide page */
+
    char *webSite;  /* Gawm main page web site */
    char *text_bg_color;  /* background color for drawing text */
    char *text_fg_color;  /* foreround color for drawing text */
@@ -372,6 +374,11 @@ void *up_addr_up_helpCmd( UserPrefs *up )
    return &up->helpCmd;
 }
 
+void *up_addr_up_termCmd( UserPrefs *up )
+{
+   return &up->termCmd;
+}
+
 void *up_addr_up_userGuide( UserPrefs *up )
 {
    return &up->userGuide;
@@ -506,6 +513,8 @@ ConfigDescTable confDesc[] = {  /* UserPrefs - by mkcf */
      "index of the card '-' for default, '0' ..."       },
 { "up_helpCmd", up_addr_up_helpCmd, TPTR,
      "command called for display help"       },
+{ "up_termCmd", up_addr_up_termCmd, TPTR,
+     "command called for launching a terminal"       },
 { "up_userGuide", up_addr_up_userGuide, TPTR,
      "Gawm user guide page"       },
 { "up_webSite", up_addr_up_webSite, TPTR,
@@ -555,6 +564,7 @@ void up_dyn_destroy(UserPrefs *up)
     app_free(up->lastDataFile);
     app_free(up->cardidstr);
     app_free(up->helpCmd);
+    app_free(up->termCmd);
     app_free(up->userGuide);
     app_free(up->webSite);
     app_free(up->text_bg_color);
@@ -616,6 +626,7 @@ void up_init_defaults(UserPrefs *up)
    up->rate = 48000;
    up->duration = 10;
    up->helpCmd = app_strdup("firefox %s");
+   up->termCmd = app_strdup("x-terminal-emulator -e");
    up->userGuide = app_strdup("http://www.rvq.fr/linux/gawman.php");
    up->webSite = app_strdup("http://www.rvq.fr/linux/gaw.php");
    up->text_bg_color = app_strdup("rgb(239,41,41)");

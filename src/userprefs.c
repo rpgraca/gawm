@@ -206,8 +206,15 @@ int up_set_var(UserPrefs *up, ConfigDescTable *pdesc, char *tok)
     case TPTR :
       {
 	 char **pv = (char **) varptr;
-	 app_free(*pv);
-	 *pv = app_strdup( tok ) ;
+         char *unquoted = stu_unquote(tok);
+         if ( up->curel == 0 ) {
+	    app_free(*pv);
+	    *pv = app_strdup( unquoted ) ;
+         } else {
+            char *tmp = app_strcatdup(*pv, " ", unquoted, NULL);
+            app_free(*pv);
+            *pv = tmp;
+         }
 	 return 0 ;
       }
     case TLIST :

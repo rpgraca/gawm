@@ -433,6 +433,45 @@ static int aio_table_new( GawIoData *gawio, char *pline )
    return 0;
 }
 
+static int aio_get_data( GawIoData *gawio, char *pline )
+{
+   char *varName = stu_token_next( &pline, " ", " " );
+   fprintf(stderr, "aio_get_data: looking for '%s' in table %p\n", varName, (void*)gawio->wds);
+   WaveVar *var = ( WaveVar *) dataset_get_var_for_name(gawio->wds, varName );
+   if ( ! var ) {
+      gawio->msg = g_strdup_printf( _("Variable %s not defined"), varName );
+      return -1;
+   }
+
+   int nrows = dataset_get_nrows(gawio->wds);
+   con_fmt_send(gawio->cnx, "%d\n", nrows);
+
+   for (int i = 0; i < nrows; i++) {
+      double x = dataset_val_get(gawio->wds, i, 0);
+      double y = dataset_val_get(gawio->wds, i, var->colno);
+      con_fmt_send(gawio->cnx, "%g %g\n", x, y);
+   }
+   return 0;
+}
+
+static int aio_table_list( GawIoData *gawio, char *pline )
+{
+   UserData *ud = gawio->ud;
+   DataFile *wdata;
+   char *name;
+   
+   GList *list = ud->wdata_list;
+   con_fmt_send(gawio->cnx, "%d\n", g_list_length(ud->wdata_list));
+
+   while (list) {
+      wdata = (DataFile *) list->data;
+      name = wavetable_get_tblname (wdata->wt);
+      con_fmt_send(gawio->cnx, "%s\n", name);
+      list = list->next;
+   }
+   return 0;
+}
+
 static int aio_table_del( GawIoData *gawio, char *pline )
 {
    DataFile *wdata;
@@ -486,6 +525,7 @@ Gaw_Io_Command gaw_io_commands[] = {
    { "copyvar",      aio_copyvar,           1 },
    { "reload_all",   aio_reload_all,        1 }, /* stefan */
    { "dataset",      aio_dataset_add,       0 },
+   { "get_data",     aio_get_data,          1 },
    { "delvar",       aio_delvar,            1 },
    { "enddata",      aio_enddata,           0 },
    { "export_img",   aio_export_img,        0 },
@@ -496,6 +536,7 @@ Gaw_Io_Command gaw_io_commands[] = {
    { "panel",        aio_panel_add,         0 },
    { "rowdatas",     aio_rowdatas_add,      1 },
    { "tabledel",     aio_table_del,         0 },
+   { "table_list",   aio_table_list,        0 },
    { "table_new",    aio_table_new,         0 },
    { "table_set",    aio_table_set,         0 },
    { "variables",    aio_variables_add,     1 },
@@ -542,8 +583,19 @@ int aio_process_line( GawIoData *gawio, gchar *linebuf, gsize length)
       if ( ! app_strcasecmp( ptab->name, s) ) {
 	 if (  ptab->check_wds ) {
 	    if ( ! gawio->wds ) {
-	       gawio->msg = app_strdup( _("Current table not defined") );
-	       return -1;
+               if ( gawio->ud->curwds ) {
+                  fprintf(stderr, "aio_process_line: auto-setting wds from curwds: %p\n", (void*)gawio->ud->curwds);
+                  gawio->wds = gawio->ud->curwds;
+               } else if ( gawio->ud->wdata_list ) {
+                  /* Fallback to the first loaded table */
+                  DataFile *wdata = (DataFile *) gawio->ud->wdata_list->data;
+                  gawio->wds = wavetable_get_cur_dataset(wdata->wt);
+                  fprintf(stderr, "aio_process_line: auto-setting wds from list fallback: %p\n", (void*)gawio->wds);
+               } else {
+                  fprintf(stderr, "aio_process_line: ERROR - no tables loaded at all!\n");
+	          gawio->msg = app_strdup( _("Current table not defined") );
+	          return -1;
+               }
 	    }
 	 }
 	 ret = ptab->cmdHandler(gawio, sn);
@@ -635,6 +687,11 @@ void aio_create_channel(UserData *ud)
       return;
    }
    gawio->listen = cnx;
+   ud->listenPort = cnx->port; /* Store the actual port (might have been 0) */
+   
+   char port_str[16];
+   snprintf(port_str, sizeof(port_str), "%d", ud->listenPort);
+   setenv("GAWM_PORT", port_str, 1);
 
    gawio->listenchannel = g_io_channel_unix_new(cnx->s);
    g_io_channel_set_encoding(gawio->listenchannel, NULL, NULL);

@@ -212,6 +212,7 @@ extern AwSubmenuList wave_algo_desc_tab[];
 int aw_dialog_show ( int type, const char *text);
 void aw_vl_menu_item_add( DataFile *wdata);
 void aw_redraw_all_gaction (GSimpleAction *action, GVariant *param, gpointer user_data );
+void aw_python_shell_gaction (GSimpleAction *action, GVariant *param, gpointer user_data );
 void aw_show_grid_cmd (UserData *ud, int on );
 void aw_vl_menu_item_remove( DataFile *wdata);
 void aw_panel_scrolled_set_size_request( UserData *ud);
