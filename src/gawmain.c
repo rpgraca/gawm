@@ -372,14 +372,18 @@ void aw_window_size(UserData *ud )
    msg_dbg( "w %d, h %d", width, height );
 #endif
 
-   gtk_widget_get_preferred_size( GTK_WIDGET(ud->menuBar), &req, &nreq);
-   height += req.height;
+   if (ud->menuBar) {
+      gtk_widget_get_preferred_size( GTK_WIDGET(ud->menuBar), &req, &nreq);
+      height += req.height;
+   }
 #if  DEBUG_SIZE
    msg_dbg( "w %d, h %d", width, height );
 #endif
    
-   gtk_widget_get_preferred_size( GTK_WIDGET(ud->toolBar), &req, &nreq);
-   height += req.height;
+   if (ud->toolBar) {
+      gtk_widget_get_preferred_size( GTK_WIDGET(ud->toolBar), &req, &nreq);
+      height += req.height;
+   }
 #if  DEBUG_SIZE
    msg_dbg( "w %d, h %d", width, height );
 #endif   

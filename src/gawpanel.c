@@ -57,6 +57,7 @@ void pa_panel_construct( WavePanel *wp, UserData *ud)
    gtk_paned_pack2(GTK_PANED(wp->hpaned), wp->drawing, TRUE, FALSE);
    gtk_paned_set_position(GTK_PANED(wp->hpaned), 180);
    gtk_widget_show(wp->hpaned);
+   g_object_ref(wp->hpaned);
 
    pa_ylabel_box_show(wp);
    pa_panel_lmscroll_win_set_size_request(wp);

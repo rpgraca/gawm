@@ -574,7 +574,7 @@ void up_init_defaults(UserPrefs *up)
    int i;
    
    prog_debug = 0;
-   up->npanels = 2;
+   up->npanels = 1;
    up->min_win_width = 80;
    up->min_win_height = 50;
    up->gridXSpacing = 20;
@@ -586,7 +586,7 @@ void up_init_defaults(UserPrefs *up)
    up->toolBarStyle = 2;
    up->showGrid = 1;
    app_dup_str( &up->panelBgColor, "rgba(0,0,0,1)");   /* black */
-   app_dup_str( &up->gridColor, "#662828");      /* light red */
+   app_dup_str( &up->gridColor, "#444444");      /* faded grey */
    app_dup_str( &up->hlColor, "#ffffff");      /*  white */
    app_dup_str( &up->srangeColor, "#ffffff");  /*  white */
    app_dup_str( &up->srangeColor, "#ffffff");  /*  white */

@@ -100,9 +100,13 @@ void ap_panel_update_table(UserData *ud )
 
       WavePanel *wp = (WavePanel *) list->data;
 
-      gtk_grid_attach(GTK_GRID(table), wp->hpaned, 
-                /* left,    top,  width,   height    */
-                      0, newrow,      2,        1  );
+      if (wp->hpaned && GTK_IS_WIDGET(wp->hpaned)) {
+         gtk_grid_attach(GTK_GRID(table), wp->hpaned, 
+                   /* left,    top,  width,   height    */
+                         0, newrow,      2,        1  );
+      } else {
+         msg_error("WavePanel hpaned is NULL or not a widget!");
+      }
       newrow++;
       list = next;
    }
