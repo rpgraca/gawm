@@ -47,6 +47,7 @@ void wavevar_dup_name(WaveVar *wv, char *varName );
 double wavevar_interp_value(WaveVar *dv, double ival);
 double wavevar_maxof_value(WaveVar *dv, double ival, int npoints);
 double wavevar_get_yvalue(WaveVar *dv, double ival, int npoints);
+void wavevar_get_range(WaveVar *dv, double x_start, double x_end, double *y_min, double *y_max);
 
 int wavevar_get_type(WaveVar *wv );
 void wavevar_set_type(WaveVar *wv, int type );

@@ -251,6 +251,48 @@ double wavevar_get_yvalue(WaveVar *dv, double ival, int npoints)
    }
 }
 
+void wavevar_get_range(WaveVar *dv, double x_start, double x_end, double *y_min, double *y_max)
+{
+   WDataSet *wds = dv->wds;
+   int ri, i_start, i_end, i;
+   double val;
+   double min_v = G_MAXDOUBLE;
+   double max_v = -G_MAXDOUBLE;
+   int nrows = dataset_get_nrows(wds);
+
+   if (nrows <= 0) {
+      *y_min = *y_max = 0.0;
+      return;
+   }
+
+   i_start = dataset_find_row_index(wds, x_start);
+   i_end = dataset_find_row_index(wds, x_end);
+
+   /* Ensure indices are in range and correctly ordered */
+   if (i_start > i_end) { int t = i_start; i_start = i_end; i_end = t; }
+   if (i_start < 0) i_start = 0;
+   if (i_end >= nrows) i_end = nrows - 1;
+
+   /* Check points within the interval */
+   for (i = i_start; i <= i_end; i++) {
+      val = dataset_val_get(wds, i, dv->colno);
+      if (val < min_v) min_v = val;
+      if (val > max_v) max_v = val;
+   }
+
+   /* Also check the exact start and end values via interpolation */
+   val = wavevar_interp_value(dv, x_start);
+   if (val < min_v) min_v = val;
+   if (val > max_v) max_v = val;
+
+   val = wavevar_interp_value(dv, x_end);
+   if (val < min_v) min_v = val;
+   if (val > max_v) max_v = val;
+
+   *y_min = min_v;
+   *y_max = max_v;
+}
+
 /*
  * create buuton label
  * if tag < 0 , we are in a list window, do not indicate file tag.

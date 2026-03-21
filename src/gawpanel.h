@@ -36,6 +36,7 @@ struct _WavePanel {
    GtkWidget *lmscroll_win; /* scrolled window for lmtable */
    GtkWidget *lmswtable;     /* left most scrolled window table */
    GtkWidget *lmtable;      /* left measure global table */
+   GtkWidget *hpaned;       /* paned to separate lmtable and drawing */
    GtkWidget *popmenu;      /*  popup menu in panel */
    GtkWidget *textpopmenu;    /*  popup menu in panel for text edit */
    

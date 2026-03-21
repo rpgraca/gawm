@@ -584,6 +584,7 @@ void up_init_defaults(UserPrefs *up)
    up->minPanelHeight = 50;
    up->minPanelWidth = 100;
    up->toolBarStyle = 2;
+   up->showGrid = 1;
    app_dup_str( &up->panelBgColor, "rgba(0,0,0,1)");   /* black */
    app_dup_str( &up->gridColor, "#662828");      /* light red */
    app_dup_str( &up->hlColor, "#ffffff");      /*  white */

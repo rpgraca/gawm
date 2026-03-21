@@ -52,6 +52,12 @@ void pa_panel_construct( WavePanel *wp, UserData *ud)
    wp->lmtable = pa_panel_label_meas_box_create(wp, ud);
    g_object_ref (wp->lmtable); /* increment ref to avoid destruction */
 
+   wp->hpaned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+   gtk_paned_pack1(GTK_PANED(wp->hpaned), wp->lmtable, FALSE, FALSE);
+   gtk_paned_pack2(GTK_PANED(wp->hpaned), wp->drawing, TRUE, FALSE);
+   gtk_paned_set_position(GTK_PANED(wp->hpaned), 180);
+   gtk_widget_show(wp->hpaned);
+
    pa_ylabel_box_show(wp);
    pa_panel_lmscroll_win_set_size_request(wp);
 }
@@ -77,8 +83,7 @@ void pa_panel_destroy(void *wp)
    g_object_ref_sink (this->popmenu);
    g_object_ref_sink (this->textpopmenu);
    g_object_unref (this->lmtable); /* deccrement ref */
-   gtk_widget_destroy(this->lmtable);
-   gtk_widget_destroy(this->drawing);
+   gtk_widget_destroy(this->hpaned); /* destroys children too */
 
    app_class_destroy( wp );
 }
@@ -501,7 +506,8 @@ GtkWidget *pa_panel_label_meas_box_create(WavePanel *wp, UserData *ud)
    wp->lmscroll_win = scrolled_window ;
    g_object_ref (scrolled_window); /* increment ref to avoid destruction */
    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (scrolled_window),
-				  GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+   GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+
    gtk_scrolled_window_set_placement(GTK_SCROLLED_WINDOW (scrolled_window),
 				     GTK_CORNER_TOP_RIGHT);
    GtkWidget *vscrollbar = gtk_scrolled_window_get_vscrollbar(GTK_SCROLLED_WINDOW(scrolled_window));
@@ -605,14 +611,13 @@ void pa_panel_vw_delete(WavePanel *wp)
 void pa_panel_lmscroll_win_set_size_request(WavePanel *wp)
 {
    gtk_scrolled_window_set_min_content_width(
-                      GTK_SCROLLED_WINDOW (wp->lmscroll_win),
-                       wp->ud->up->lmtableWidth );
+                       GTK_SCROLLED_WINDOW (wp->lmscroll_win),
+                        10 );
    gtk_widget_set_size_request (GTK_WIDGET(wp->lmtable),
-			 wp->ud->up->lmtableWidth, -1 );
+ 			 10, -1 );
 
-   msg_dbg( "w %d, h %d", wp->ud->up->lmtableWidth, -1  );
+   msg_dbg( "w %d, h %d", 10, -1  );
 }
-
 void pa_panel_drawing_set_gdk_cursor(WavePanel *wp, int cursorType )
 {
    da_set_gdk_cursor(wp->drawing, cursorType);

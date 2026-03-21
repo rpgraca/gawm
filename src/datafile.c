@@ -591,7 +591,9 @@ datafile_create_list_win (DataFile *wdata)
    gtk_tree_view_column_set_title(column, "Signal");
 
    renderer = gtk_cell_renderer_text_new();
+   g_object_set(renderer, "ellipsize", PANGO_ELLIPSIZE_END, "width-chars", 1, NULL);
    gtk_tree_view_column_pack_start(column, renderer, TRUE);
+
    gtk_tree_view_column_set_cell_data_func(column, renderer,
                                             datafile_label_cell_data_func,
                                             NULL, NULL);
@@ -635,7 +637,7 @@ datafile_create_list_win (DataFile *wdata)
    gtk_tree_store_set(wdata->wlist_store, &wdata->wlist_root_iter,
                      COL_LABEL, filename,
                      COL_VAR, NULL,
-                     COL_FULLNAME, NULL,
+                     COL_FULLNAME, filename,
                      -1);
 
    /* Populate signals under the file root */

@@ -261,7 +261,7 @@ void ac_color_initialize (WavePanel *wp)
 }
 
 
-static gint
+gint
 ac_color_dialog (GtkWidget *window, GdkRGBA *color, gchar *title )
 {
    GtkWidget *dialog;

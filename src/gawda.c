@@ -199,6 +199,9 @@ void da_drawing_draw_wave (VisibleWave *vw, WavePanel *wp)
 {
    cairo_t *cr = wp->cr;
 
+   if ( ! vw->shown ) {
+      return;
+   }
    gdk_cairo_set_source_rgba (cr, vw->color);
    cairo_set_line_join (cr, CAIRO_LINE_JOIN_MITER);
    cairo_set_line_cap (cr, CAIRO_LINE_CAP_BUTT);
@@ -441,7 +444,6 @@ da_find_closest_wave(WavePanel *wp, int px, int py)
    GawLabels *lbx = ud->xLabels;
    GawLabels *lby = wp->yLabels;
    int h = gtk_widget_get_allocated_height(wp->drawing);
-   double xval = al_label_x2val(lbx, px);
    double min_dist = 1e30;
    VisibleWave *closest = NULL;
    GList *list;
@@ -449,14 +451,37 @@ da_find_closest_wave(WavePanel *wp, int px, int py)
 
    for (list = wp->vwlist; list; list = list->next) {
       VisibleWave *vw = (VisibleWave *) list->data;
-      double yval = wavevar_interp_value(vw->var, xval);
-      int wy;
+      if ( ! vw->shown ) continue;
+
+      /* Horizontal window in values */
+      double x_start = al_label_x2val(lbx, px - threshold);
+      double x_end   = al_label_x2val(lbx, px + threshold);
+
+      double y_min_val, y_max_val;
+      wavevar_get_range(vw->var, x_start, x_end, &y_min_val, &y_max_val);
+
+      int wy_min, wy_max;
       if (al_label_do_logAxis(lby)) {
-         wy = VAL2LY(lby, yval, h);
+         wy_min = VAL2LY(lby, y_min_val, h);
+         wy_max = VAL2LY(lby, y_max_val, h);
       } else {
-         wy = VAL2Y(lby, yval, h);
+         wy_min = VAL2Y(lby, y_min_val, h);
+         wy_max = VAL2Y(lby, y_max_val, h);
       }
-      double dist = fabs((double)(py - wy));
+
+      /* In pixel space, y_min might be numerically greater than y_max if y-axis is inverted */
+      int p_ymin = MIN(wy_min, wy_max);
+      int p_ymax = MAX(wy_min, wy_max);
+
+      double dist;
+      if (py >= p_ymin && py <= p_ymax) {
+         dist = 0; /* Within the vertical range swept by the wave in the horizontal window */
+      } else if (py < p_ymin) {
+         dist = (double)(p_ymin - py);
+      } else {
+         dist = (double)(py - p_ymax);
+      }
+
       if (dist < min_dist) {
          min_dist = dist;
          closest = vw;
@@ -851,16 +876,22 @@ da_drawing_button_press_cb (GtkWidget *widget, GdkEventButton *event,
       } else {
          vw_hit = da_find_closest_wave(wp, (int) event->x, (int) event->y);
          if ( vw_hit ) {
-            /* right-click on a wave: select it, then show panel popup */
+            /* right-click on a wave: select it, then show wave popup */
             pa_panel_set_selected( wp, ud );
             if (!gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(vw_hit->button))) {
                gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(vw_hit->button), TRUE);
             }
+            ud->last_clicked_wave = vw_hit;
+            menu = vw_hit->buttonpopup;
          } else if ( wp->selected ) {
             pa_panel_set_selected( NULL, ud );
+            ud->last_clicked_wave = NULL;
             da_drawing_redraw(wp->drawing);
+            menu = wp->popmenu;
+         } else {
+            ud->last_clicked_wave = NULL;
+            menu = wp->popmenu;
          }
-         menu = wp->popmenu;
       }
 
       gtk_menu_popup (GTK_MENU (menu), NULL, NULL,
@@ -907,18 +938,24 @@ da_drawing_button_press_cb (GtkWidget *widget, GdkEventButton *event,
          /* Check if click is on a wave trace */
          VisibleWave *closest = da_find_closest_wave(wp, (int) event->x, (int) event->y);
          if (closest) {
-            /* Toggle wave highlight */
-            gboolean active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(closest->button));
-            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(closest->button), !active);
-            if (!active) {
-               /* Newly selected: arm for potential drag */
+            if ( event->type == GDK_2BUTTON_PRESS && event->button == 1 ) {
+               /* Fast double left click on drawing: hide it */
+               closest->shown = 0;
+               wave_label_update(closest);
+               da_drawing_redraw(wp->drawing);
+               ud->mouseState = M_NONE;
+               gtk_grab_remove(widget);
+            } else {
+               /* Arm for potential drag or toggle on release */
                da_armed_wave = closest;
                da_armed_x = (int) event->x;
                da_armed_y = (int) event->y;
                ud->mouseState = M_WAVE_ARMED;
+               ud->last_clicked_wave = closest;
             }
          } else {
             /* Check if clicking near an existing cursor to drag it */
+            ud->last_clicked_wave = NULL;
             int near_cursor = da_find_nearest_cursor(ud, (int) event->x);
             if (near_cursor >= 0) {
                da_dragged_cursor = near_cursor;
@@ -983,7 +1020,11 @@ da_drawing_button_release_cb (GtkWidget *widget, GdkEventButton *event,
    GdkWindow *window = gtk_widget_get_window (widget);
    switch(ud->mouseState) {
     case M_WAVE_ARMED:
-      /* Click on wave without dragging: just keep the selection */
+      /* Click on wave without dragging: toggle selection */
+      if (da_armed_wave) {
+         gboolean active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(da_armed_wave->button));
+         gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(da_armed_wave->button), !active);
+      }
       gtk_grab_remove(widget);
       da_armed_wave = NULL;
       break;

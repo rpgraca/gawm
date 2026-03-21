@@ -18,8 +18,10 @@ struct _VisibleWave {
    DataFile *wdata;
    WavePanel *wp;
    int colorn;
+   int shown;             /* 1 if wave is shown, 0 if hidden */
    int logAble;           /* the weve can be viewved in logarithm form */
    GdkRGBA *color;        /* color for the wave */
+
    GtkWidget *button;
    GtkWidget *label;
    MeasureBtn *mbtn[3];
@@ -34,6 +36,7 @@ void wave_construct( VisibleWave *vw, WaveVar *var, DataFile *wdata );
 void wave_destroy(void *vw);
 
 void wave_color_set (VisibleWave *vw);
+void wave_label_update(VisibleWave *vw);
 void wave_attach(VisibleWave *vw, WavePanel *wp, GdkRGBA *color);
 void wave_detach(VisibleWave *vw);
 void wave_vw_buttons_create(VisibleWave *vw );

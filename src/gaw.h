@@ -154,6 +154,7 @@ struct _UserData {
    GtkWidget *panelTable;     /* gtk table for panels */
    GList *panelList;          /* list of panels  */
    WavePanel *selected_panel; /* selected panel */
+   VisibleWave *last_clicked_wave; /* last wave clicked in drawing area */
    WDataSet *curwds;       /* the last dataset used; for x processing */
 
    GawLabels *xLabels;     /* structure to hold data about the axis */
@@ -296,6 +297,7 @@ int ac_color_grid_cmd (UserData *ud, char *colorspec );
 
 void ac_color_initialize (WavePanel *wp);
 void ac_color_find_style_color( GtkWidget *widget, gchar *name, GdkRGBA *rgba);
+gint ac_color_dialog (GtkWidget *window, GdkRGBA *color, gchar *title );
 int ac_color_background_cmd (UserData *ud, char *colorspec );
 void ac_color_panel_colors_gaction (GSimpleAction *action, GVariant *param, gpointer user_data );
 int ac_color_rgba_str_set(char **valp, GdkRGBA *rgba );

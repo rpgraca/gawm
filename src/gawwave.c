@@ -8,6 +8,7 @@
 
 #include <gtk/gtk.h>
 
+#include <duprintf.h>
 #include <gaw.h>
  
 #ifdef TRACE_MEM
@@ -38,6 +39,7 @@ void wave_construct( VisibleWave *vw, WaveVar *var, DataFile *wdata )
    
    vw->var = var;
    vw->wdata = wdata;
+   vw->shown = 1;
    vw->logAble = wavevar_val_get_min(vw->var) > 0.0 ? 1 : 0;
 
    gm_create_vw_popmenu ( vw );
@@ -67,6 +69,26 @@ void wave_color_set (VisibleWave *vw)
       char *colorspec = gdk_rgba_to_string(vw->color);
       ac_color_widget_style_color_set( vw->label, colorspec, ud->up->wavebgColor );
    }
+}
+
+void wave_label_update(VisibleWave *vw)
+{
+   char *labelname;
+   if ( ! vw->button || ! vw->label ) return;
+
+   labelname = wavevar_get_label(vw->var, vw->wdata->ftag);
+   gtk_widget_set_tooltip_text(vw->button, labelname);
+
+   if ( ! vw->shown ) {
+      char *markup = g_strdup_printf("<s>%s</s>", labelname);
+      gtk_label_set_markup(GTK_LABEL(vw->label), markup);
+      g_free(markup);
+      gtk_widget_set_opacity(vw->button, 0.4);
+   } else {
+      gtk_label_set_text(GTK_LABEL(vw->label), labelname);
+      gtk_widget_set_opacity(vw->button, 1.0);
+   }
+   app_free(labelname);
 }
 
 void wave_attach(VisibleWave *vw, WavePanel *wp, GdkRGBA *color)
@@ -143,6 +165,13 @@ wave_vw_button_press_cb (GtkWidget *w,
 		      NULL, data, 3, event->time);
       return TRUE;
    }
+   if (event->button == 1 && event->type == GDK_2BUTTON_PRESS) {
+      /* Fast double left click on pane menu entry: toggle visibility */
+      vw->shown = ! vw->shown;
+      wave_label_update(vw);
+      da_drawing_redraw(vw->wp->drawing);
+      return TRUE;
+   }
    return FALSE;
 }
 
@@ -184,6 +213,7 @@ void wave_vw_buttons_create(VisibleWave *vw )
    sprintf(temp, "wavecolor%d", vw->colorn);
    vw->label = ap_create_measure_label(vw->button, labelname, temp );
    g_free(labelname);
+   wave_label_update(vw);
    
    /* create Y measurement buttons */
    for ( i = 0 ; i < AW_NY_MBTN ; i++ ) {

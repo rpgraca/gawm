@@ -100,13 +100,9 @@ void ap_panel_update_table(UserData *ud )
 
       WavePanel *wp = (WavePanel *) list->data;
 
-      gtk_grid_attach(GTK_GRID(table), wp->lmtable, 
+      gtk_grid_attach(GTK_GRID(table), wp->hpaned, 
                 /* left,    top,  width,   height    */
-                      0, newrow,      1,        1  );
-
-      gtk_grid_attach(GTK_GRID(table), wp->drawing, 
-                /* left,    top,  width,   height    */
-                      1, newrow,      1,        1  );
+                      0, newrow,      2,        1  );
       newrow++;
       list = next;
    }
@@ -256,20 +252,21 @@ ap_create_measure_button(GtkWidget *box, gchar *brc, gchar *tips )
    return button;
 }
 
-GtkWidget * 
+GtkWidget *
 ap_create_measure_label(GtkWidget *box, gchar *blabel,  gchar *lrc )
 {
    GtkWidget *label;
-   
+
    label = gtk_label_new (blabel);
    gtk_widget_set_name( label, lrc );
    gtk_widget_show( label);
-/* do not work -   gtk_label_set_selectable ( GTK_LABEL(label), TRUE ); */
+   gtk_label_set_ellipsize(GTK_LABEL(label), PANGO_ELLIPSIZE_END);
+   gtk_widget_set_hexpand(label, TRUE);
+   gtk_widget_set_halign(label, GTK_ALIGN_START);
    gtk_container_add( GTK_CONTAINER(box), label );
-   
+
    return label;
 }
-
 void ap_create_xmeasure_unit(UserData *ud)
 {
    GtkWidget *hbox;

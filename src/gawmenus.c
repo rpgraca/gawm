@@ -633,7 +633,7 @@ static const gchar main_builder[] =
 "            <property name='min-content-width'>150</property>"
 "          </object>"
 "          <packing>"
-"            <property name='resize'>False</property>"
+"            <property name='resize'>True</property>"
 "            <property name='shrink'>False</property>"
 "          </packing>"
 "        </child>"
@@ -1709,9 +1709,9 @@ static const gchar buttonpopup[] =
 "  <menu id='buttonpopup'>"
 "    <section>"
 "      <item>"
-"        <attribute name='label' translatable='yes'>Delete this Wave</attribute>"
-"        <attribute name='action'>gaw.DelThisWave</attribute>"
-"        <attribute name='icon'>gtk-delete</attribute>"
+"        <attribute name='label' translatable='yes'>Hide/Show This Wave</attribute>"
+"        <attribute name='action'>gaw.ToggleVis</attribute>"
+"        <attribute name='icon'>view-hidden-symbolic</attribute>"
 "      </item>"
 "      <item>"
 "        <attribute name='label' translatable='yes'>Change Color...</attribute>"
@@ -1719,9 +1719,9 @@ static const gchar buttonpopup[] =
 "        <attribute name='icon'>preferences-color-symbolic</attribute>"
 "      </item>"
 "      <item>"
-"        <attribute name='label' translatable='yes'>Reload All waves</attribute>"
-"        <attribute name='action'>gaw.ReloadAll</attribute>"
-"        <attribute name='icon'>reload</attribute>"
+"        <attribute name='label' translatable='yes'>Delete this Wave</attribute>"
+"        <attribute name='action'>gaw.DelThisWave</attribute>"
+"        <attribute name='icon'>gtk-delete</attribute>"
 "      </item>"
 "    </section>"
 "  </menu>"
@@ -1746,14 +1746,25 @@ static void aw_bp_reload_all_files_gaction (GSimpleAction *action, GVariant *par
    g_list_foreach(ud->wdata_list, (GFunc) ap_reload_wave_file, NULL);
 }
 
+static void aw_bp_toggle_visibility_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
+{
+   VisibleWave *vw = (VisibleWave *) user_data;
+   if ( vw ) {
+      vw->shown = ! vw->shown;
+      wave_label_update(vw);
+      da_drawing_redraw(vw->wp->drawing);
+   }
+}
+
 static TooltipInfo buttonPopupTip[] = {
+   { "ToggleVis", N_("Hide/Show Wave"), N_("Toggle visibility of this wave"), NULL  },
    { "DelThisWave", N_("Delete this Wave"), N_("Delete this Wave"), NULL  },
    { "ChangeColor", N_("Change Color..."), N_("Change wave color"), NULL  },
-   { "ReloadAll", N_("Reload All waves"), N_("Reread all waveform data files"), NULL  },
    { NULL, NULL, NULL, NULL  },
 };
 
 static GActionEntry bpentries[] = {
+   { "ToggleVis", aw_bp_toggle_visibility_gaction, NULL, NULL, NULL  },
    { "DelThisWave", aw_bp_delete_this_wave_gaction, NULL, NULL, NULL  },
    { "ChangeColor", ac_bp_color_wave_gaction, NULL, NULL, NULL  },
    { "ReloadAll", aw_bp_reload_all_files_gaction, NULL, NULL, NULL  },
