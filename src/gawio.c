@@ -517,6 +517,81 @@ static int aio_reload_all( GawIoData *gawio, char *pline )
    return 0;
 }
 
+/*
+ * get_cursor <idx>
+ * Returns the X value of cursor 0 or 1.
+ */
+static int aio_get_cursor( GawIoData *gawio, char *pline )
+{
+   UserData *ud = gawio->ud;
+   char *tok = stu_token_next(&pline, " ", " ");
+   int idx = tok ? atoi(tok) : 0;
+
+   if (idx < 0 || idx > 1) {
+      gawio->msg = g_strdup_printf(_("Invalid cursor index %d"), idx);
+      return -1;
+   }
+   AWCursor *csp = ud->cursors[idx];
+   if (!csp->shown) {
+      gawio->msg = g_strdup_printf(_("Cursor %d not visible"), idx);
+      return -1;
+   }
+   con_fmt_send(gawio->cnx, "%.15g\n", csp->xval);
+   return 0;
+}
+
+/*
+ * get_values_at <x>
+ * Interpolates all variables in the current dataset at x.
+ * Returns count, then "varName value" lines.
+ */
+static int aio_get_values_at( GawIoData *gawio, char *pline )
+{
+   char *tok = stu_token_next(&pline, " ", " ");
+   if (!tok) {
+      gawio->msg = app_strdup(_("Missing x value"));
+      return -1;
+   }
+   double xval = g_ascii_strtod(tok, NULL);
+   WDataSet *wds = gawio->wds;
+   int nvars = wds->numVars - 1; /* skip independent variable */
+
+   con_fmt_send(gawio->cnx, "%d\n", nvars);
+   int j;
+   for (j = 1; j < wds->numVars; j++) {
+      WaveVar *var = (WaveVar *) dataset_get_wavevar(wds, j);
+      double yval = wavevar_interp_value(var, xval);
+      con_fmt_send(gawio->cnx, "%s %.15g\n", var->varName, yval);
+   }
+   return 0;
+}
+
+/*
+ * xschem_annotate [cursor_idx]
+ * Sends backannotation data to xschem at cursor position.
+ */
+static int aio_xschem_annotate( GawIoData *gawio, char *pline )
+{
+   char *tok = stu_token_next(&pline, " ", " ");
+   int cursor_idx = tok ? atoi(tok) : 0;
+   if (cursor_idx < 0 || cursor_idx > 1) {
+      gawio->msg = g_strdup_printf(_("Invalid cursor index %d"), cursor_idx);
+      return -1;
+   }
+   aw_xschem_annotate_at_cursor(gawio->ud, cursor_idx);
+   return 0;
+}
+
+/*
+ * xschem_clear_annotations
+ * Clears backannotation data in xschem.
+ */
+static int aio_xschem_clear( GawIoData *gawio, char *pline )
+{
+   aw_xschem_clear_annotations(gawio->ud);
+   return 0;
+}
+
 Gaw_Io_Command gaw_io_commands[] = {
    { "coladd",       aio_col_add,           1 },
    { "coldatas",     aio_coldatas_add,      1 },
@@ -540,6 +615,10 @@ Gaw_Io_Command gaw_io_commands[] = {
    { "table_set",    aio_table_set,         0 },
    { "variables",    aio_variables_add,     1 },
    { "vartype",      aio_vartype_add,       1 },
+   { "get_cursor",   aio_get_cursor,        0 },
+   { "get_values_at", aio_get_values_at,    1 },
+   { "xschem_annotate", aio_xschem_annotate, 0 },
+   { "xschem_clear_annotations", aio_xschem_clear, 0 },
    { NULL, NULL}
 };
 

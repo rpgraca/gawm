@@ -22,6 +22,9 @@ gawm_LDADD = $(top_srcdir)/lib/libload.a \
 
 ###   $(top_srcdir)/lib/libtracemem.a
 
+pythondir = @GAWRCDIR@/python
+python_DATA = $(top_srcdir)/python/gawm.py
+
 EXTRA_DIST = gaw-gtkrc gaw-gtkrc.css
 rcdata_DATA = gaw-gtkrc gaw-gtkrc.css
 

@@ -54,14 +54,52 @@ gawm [OPTIONS]... [FILE]...
   - **Per-signal Delta Y**: Shows the vertical difference for each wave between the two cursor positions.
 
 ### Python Integration & PySpice Bridge
-Gawm now features a powerful Python integration layer.
-- **Python Shell**: Launch an interactive Python shell directly from **Tools > Python Shell**.
-- **`gawm` Python Module**: A built-in bridge that connects the shell to the running viewer.
-  - `g.get_data("V(name)")`: Pull raw waveform data into NumPy arrays for processing.
-  - `g.get_tables()`: List all loaded data files/tables.
-  - `g.plot(...)`: Send processed waveforms (e.g. sums or differences) back to Gawm for visualization.
-  - `g.plot_analysis(analysis)`: Directly plot PySpice `Analysis` objects.
-- **Configurable Terminal**: The shell opens in your preferred terminal emulator (set via `up_termCmd` in `gawrc`).
+Gawm features a Python integration layer accessible from **Tools > Python Shell**.
+The `gawm` module connects to the running viewer and provides:
+
+#### Waveform Data
+| Method | Description |
+|--------|-------------|
+| `g.get_data(name)` | Get waveform data by variable name (e.g., `"V(out)"`). Returns `{"x": array, "y": array}`. |
+| `g.get_tables()` | List all loaded table names. Returns list of strings. |
+| `g.get_cursor(idx=0)` | Get cursor X position (idx: 0 or 1). Returns float or None. |
+| `g.get_values_at(x)` | Interpolate all signals at X value. Returns `{name: value}` dict. |
+| `g.get_cursor_values(idx=0)` | Get all signal values at cursor position. Returns `{"x": float, "values": dict}`. |
+
+#### Plotting
+| Method | Description |
+|--------|-------------|
+| `g.plot(x_data, y_datas, names, table_name="python", panel=None)` | Plot waveforms. `y_datas`: list of arrays, `names`: list of strings. Set `panel` to an int to auto-display. |
+| `g.add_waveform(name, x_data, y_data, table_name="python", panel=None)` | Plot a single waveform. |
+| `g.add_to_panel(name, panel=0, color=None)` | Display a variable in a panel. `color`: optional `"#rrggbb"` or `"#rrggbbaa"`. |
+| `g.plot_analysis(analysis, table_name="pyspice", panel=None)` | Plot a PySpice `Analysis` object. Supports transient, AC, and DC sweep. AC data is split into magnitude (dB) and phase tables. |
+
+#### Simulation & File Operations
+| Method | Description |
+|--------|-------------|
+| `g.simulate(spice_file, raw_file=None, ngspice_cmd="ngspice")` | Run ngspice in batch mode and load results. Returns raw file path. |
+| `g.load_file(filename, fmt=None)` | Load a waveform file. `fmt`: optional format string (e.g., `"raw"`, `"csv"`). |
+| `g.reload_all()` | Reload all loaded files from disk. |
+| `g.export_img(filename, fmt="png")` | Export panel image. |
+| `g.export_data(filename, fmt=None)` | Export displayed waveform data. |
+| `g.set_table(name)` | Set the active table by name. |
+| `g.delete_table(name)` | Delete a table by name. |
+
+#### Display Control
+| Method | Description |
+|--------|-------------|
+| `g.set_panels(num)` | Set the number of waveform panels. |
+| `g.grid(on=True)` | Enable/disable grid. |
+| `g.logx(on=True)` | Enable/disable logarithmic X axis. |
+| `g.color_bg(color)` | Set background color (e.g., `"#000000"`). |
+
+#### Xschem from Python
+| Method | Description |
+|--------|-------------|
+| `g.xschem_annotate(cursor_idx=0)` | Send signal values at cursor to xschem for backannotation. |
+| `g.xschem_clear_annotations()` | Clear backannotation data in xschem. |
+
+The shell opens in your preferred terminal emulator (set via `up_termCmd` in `gawrc`).
 
 ### Xschem Integration
 Gawm can interact with **Xschem** for cross-probing.

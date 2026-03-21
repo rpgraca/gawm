@@ -139,7 +139,6 @@ aw_python_shell_gaction (GSimpleAction *action, GVariant *param, gpointer user_d
    }
 
    if ( ud->listenPort ) {
-      char *cwd = getcwd(NULL, 0);
       GError *error = NULL;
       gint argc;
       gchar **term_argv;
@@ -151,7 +150,7 @@ aw_python_shell_gaction (GSimpleAction *action, GVariant *param, gpointer user_d
             "import gawm; g=gawm.Gawm(port=%d); g.connect(); "
             "print('\\nConnected to gawm on port %d'); "
             "print('Use \"g\" to interact with the viewer.')",
-            cwd, ud->listenPort, ud->listenPort);
+            GAWDATADIR, ud->listenPort, ud->listenPort);
          
          /* Construct final argv: [term, ..., python3, -i, -c, py_init] */
          gchar **spawn_argv = g_new0(gchar *, argc + 5);
@@ -200,7 +199,6 @@ aw_python_shell_gaction (GSimpleAction *action, GVariant *param, gpointer user_d
          aw_dialog_show(MSG_T_ERROR, msg);
          g_error_free(error);
       }
-      free(cwd);
    }
 }
 
