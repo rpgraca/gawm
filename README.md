@@ -19,12 +19,6 @@ gawm [OPTIONS]... [FILE]...
 
 ## Changes from original Gaw
 
-### Rebranding & UI
-- Fully rebranded from `gaw`/`gaw3` to **`gawm`**.
-- Updated "About" dialog to reflect the fork status and updated repository links.
-- Modernized all UI icons using **symbolic variants** for a cleaner, high-DPI friendly look.
-- Default configuration now uses a single-pane view and a faded grey grid for better focus.
-
 ### Signal Lists (Global & Per-Pane)
 - The global signal list is embedded as a resizable sidebar (left side of the main window).
 - **Independent Pane Resizing**: Each waveform panel now has its own draggable divider, allowing you to resize the signal list/measurements area independently for each pane.
