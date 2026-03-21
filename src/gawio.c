@@ -436,7 +436,6 @@ static int aio_table_new( GawIoData *gawio, char *pline )
 static int aio_get_data( GawIoData *gawio, char *pline )
 {
    char *varName = stu_token_next( &pline, " ", " " );
-   fprintf(stderr, "aio_get_data: looking for '%s' in table %p\n", varName, (void*)gawio->wds);
    WaveVar *var = ( WaveVar *) dataset_get_var_for_name(gawio->wds, varName );
    if ( ! var ) {
       gawio->msg = g_strdup_printf( _("Variable %s not defined"), varName );
@@ -584,15 +583,12 @@ int aio_process_line( GawIoData *gawio, gchar *linebuf, gsize length)
 	 if (  ptab->check_wds ) {
 	    if ( ! gawio->wds ) {
                if ( gawio->ud->curwds ) {
-                  fprintf(stderr, "aio_process_line: auto-setting wds from curwds: %p\n", (void*)gawio->ud->curwds);
                   gawio->wds = gawio->ud->curwds;
                } else if ( gawio->ud->wdata_list ) {
                   /* Fallback to the first loaded table */
                   DataFile *wdata = (DataFile *) gawio->ud->wdata_list->data;
                   gawio->wds = wavetable_get_cur_dataset(wdata->wt);
-                  fprintf(stderr, "aio_process_line: auto-setting wds from list fallback: %p\n", (void*)gawio->wds);
                } else {
-                  fprintf(stderr, "aio_process_line: ERROR - no tables loaded at all!\n");
 	          gawio->msg = app_strdup( _("Current table not defined") );
 	          return -1;
                }
