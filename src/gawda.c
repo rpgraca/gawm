@@ -780,7 +780,6 @@ da_drawing_scroll_cb(GtkWidget *widget, GdkEventScroll *event, gpointer data)
    /* Ctrl+scroll: zoom Y axis of this panel */
    if (event->state & GDK_CONTROL_MASK) {
       GawLabels *lby = wp->yLabels;
-      int h = gtk_widget_get_allocated_height(widget);
       double yval = al_label_y2val(lby, (int) event->y);
       double ystart = lby->start_val;
       double yend = lby->end_val;

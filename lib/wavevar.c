@@ -254,7 +254,7 @@ double wavevar_get_yvalue(WaveVar *dv, double ival, int npoints)
 void wavevar_get_range(WaveVar *dv, double x_start, double x_end, double *y_min, double *y_max)
 {
    WDataSet *wds = dv->wds;
-   int ri, i_start, i_end, i;
+   int i_start, i_end, i;
    double val;
    double min_v = G_MAXDOUBLE;
    double max_v = -G_MAXDOUBLE;

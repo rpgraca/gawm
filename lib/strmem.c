@@ -146,7 +146,7 @@ char *app_strcasestr(const char *s1, const char *s2)
 char *app_strstr(const char *s1, const char *s2)
 {
    if (s1 && s2) {
-      return strstr(s1, s2);
+      return (char *) strstr(s1, s2);
    }
    return NULL;
 }

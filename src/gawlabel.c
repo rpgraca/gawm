@@ -346,7 +346,7 @@ void al_label_draw(GawLabels *lb)
    int y;
    LabelData *lbd;
    int nlabels = g_list_length( lb->label_list);
-   
+
    for ( i = 0 ; i < lb->nlabels ; i++ ){
       lbd = (LabelData *) g_list_nth_data ( lb->label_list, i );
       double val = lbd->lbval;

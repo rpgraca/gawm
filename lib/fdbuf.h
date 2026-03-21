@@ -6,7 +6,9 @@
  * 
  * include LICENSE
  */
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE      /* off_t */
+#endif
 #include <sys/types.h>
 
 #include <dbuf.h>

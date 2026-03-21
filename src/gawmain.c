@@ -118,7 +118,6 @@ aw_submenu_activate_gaction (GSimpleAction *action, GVariant *param,  gpointer u
 {
    AwSubmenuAction *sa = (AwSubmenuAction *) user_data;
    AwSubmenuList *tbl = sa->tbl;
-   const gchar *name = g_action_get_name (G_ACTION (action));
    int i = 0;
    GVariant *old_state, *new_state;
 
