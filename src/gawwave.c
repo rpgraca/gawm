@@ -149,7 +149,14 @@ void wave_vw_buttons_delete(VisibleWave *vw)
 gboolean
 wave_vw_button_toggled_cb (GtkWidget *widget, gpointer data)
 {
-   da_drawing_redraw( ((WavePanel *) data)->drawing);
+   WavePanel *wp = (WavePanel *) data;
+   VisibleWave *vw = g_object_get_data(G_OBJECT(widget), "vw");
+
+   if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) ) {
+      if (vw) aw_xschem_highlight_wave(vw);
+   }
+
+   da_drawing_redraw( wp->drawing);
    return FALSE;
 }
 
@@ -201,7 +208,9 @@ void wave_vw_buttons_create(VisibleWave *vw )
             "Press button 3\n for options menus\n\n"
 	    "Drag button to move,\n copy or delete wave");
    vw->button = ap_create_toggle_button(NULL, "wavebutton", tips );
+   g_object_set_data(G_OBJECT(vw->button), "vw", (gpointer) vw);
    g_object_ref (vw->button); /* increment ref to avoid destruction */
+
    g_signal_connect (vw->button, "toggled",
 		     G_CALLBACK (wave_vw_button_toggled_cb), (gpointer) wp );
    g_signal_connect (vw->button, "button_press_event",

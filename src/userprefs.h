@@ -114,8 +114,9 @@ struct _UserPrefs {
    char *cardidstr;  /* index of the card '-' for default, '0' ... */
    char *helpCmd;  /* command called for display help */
    char *termCmd;  /* command called for launching a terminal */
+   char *xschemHost; /* xschem host */
+   int xschemPort; /* xschem port */
    char *userGuide;  /* Gawm user guide page */
-
    char *webSite;  /* Gawm main page web site */
    char *text_bg_color;  /* background color for drawing text */
    char *text_fg_color;  /* foreround color for drawing text */
@@ -379,6 +380,16 @@ void *up_addr_up_termCmd( UserPrefs *up )
    return &up->termCmd;
 }
 
+void *up_addr_up_xschemHost( UserPrefs *up )
+{
+   return &up->xschemHost;
+}
+
+void *up_addr_up_xschemPort( UserPrefs *up )
+{
+   return &up->xschemPort;
+}
+
 void *up_addr_up_userGuide( UserPrefs *up )
 {
    return &up->userGuide;
@@ -515,6 +526,10 @@ ConfigDescTable confDesc[] = {  /* UserPrefs - by mkcf */
      "command called for display help"       },
 { "up_termCmd", up_addr_up_termCmd, TPTR,
      "command called for launching a terminal"       },
+{ "up_xschemHost", up_addr_up_xschemHost, TPTR,
+     "xschem host"       },
+{ "up_xschemPort", up_addr_up_xschemPort, TDECI,
+     "xschem port"       },
 { "up_userGuide", up_addr_up_userGuide, TPTR,
      "Gawm user guide page"       },
 { "up_webSite", up_addr_up_webSite, TPTR,
@@ -565,6 +580,7 @@ void up_dyn_destroy(UserPrefs *up)
     app_free(up->cardidstr);
     app_free(up->helpCmd);
     app_free(up->termCmd);
+    app_free(up->xschemHost);
     app_free(up->userGuide);
     app_free(up->webSite);
     app_free(up->text_bg_color);
@@ -627,6 +643,8 @@ void up_init_defaults(UserPrefs *up)
    up->duration = 10;
    up->helpCmd = app_strdup("firefox %s");
    up->termCmd = app_strdup("x-terminal-emulator -e");
+   up->xschemHost = app_strdup("localhost");
+   up->xschemPort = 2022;
    up->userGuide = app_strdup("http://www.rvq.fr/linux/gawman.php");
    up->webSite = app_strdup("http://www.rvq.fr/linux/gaw.php");
    up->text_bg_color = app_strdup("rgb(239,41,41)");

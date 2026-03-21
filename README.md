@@ -63,6 +63,13 @@ Gawm now features a powerful Python integration layer.
   - `g.plot_analysis(analysis)`: Directly plot PySpice `Analysis` objects.
 - **Configurable Terminal**: The shell opens in your preferred terminal emulator (set via `up_termCmd` in `gawrc`).
 
+### Xschem Integration
+Gawm can now interact with **Xschem** for cross-probing.
+- **Cross-Highlighting**: When you highlight a waveform in Gawm (by clicking its trace or signal list entry), Gawm sends a command to Xschem to highlight the corresponding net in the schematic.
+- **Configuration**: The connection settings can be adjusted in your `gawrc` file:
+  - `up_xschemHost`: The hostname where Xschem is running (default: `localhost`).
+  - `up_xschemPort`: The TCP port Xschem is listening on (default: `2022`).
+
 ## License
 
 Gawm is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
