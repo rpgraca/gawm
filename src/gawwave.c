@@ -152,9 +152,7 @@ wave_vw_button_toggled_cb (GtkWidget *widget, gpointer data)
    WavePanel *wp = (WavePanel *) data;
    VisibleWave *vw = g_object_get_data(G_OBJECT(widget), "vw");
 
-   if ( gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget)) ) {
-      if (vw) aw_xschem_highlight_wave(vw);
-   }
+   if (vw && wp->ud->up->xschemHighlight) aw_xschem_sync_highlights(wp->ud);
 
    da_drawing_redraw( wp->drawing);
    return FALSE;

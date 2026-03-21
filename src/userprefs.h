@@ -125,6 +125,7 @@ struct _UserPrefs {
    char *date_fmt; /* a strptime, strftime format for time_t conv */
    char *diffdate_fmt;  /* a printf format to exprees a diff date */
    int xconvert;   /* index of the X conversion */
+   int xschemHighlight; /* sync wave highlights to xschem */
 };
 
 
@@ -435,6 +436,11 @@ void *up_addr_up_xconvert( UserPrefs *up )
    return &up->xconvert;
 }
 
+void *up_addr_up_xschemHighlight( UserPrefs *up )
+{
+   return &up->xschemHighlight;
+}
+
 ConfigDescTable confDesc[] = {  /* UserPrefs - by mkcf */
 { "", 0, TCMT,
      "User Preferences"       },
@@ -558,6 +564,8 @@ ConfigDescTable confDesc[] = {  /* UserPrefs - by mkcf */
      "a strptime, strftime format for time_t conv"       },
 { "up_diffdate_fmt", up_addr_up_diffdate_fmt, TPTR,
      "a printf format to exprees a diff date"       },
+{ "up_xschemHighlight", up_addr_up_xschemHighlight, TDECI,
+     "sync wave highlights to xschem"       },
     {  0, 0, 0, 0, },
 };
 
@@ -644,7 +652,7 @@ void up_init_defaults(UserPrefs *up)
    up->helpCmd = app_strdup("firefox %s");
    up->termCmd = app_strdup("x-terminal-emulator -e");
    up->xschemHost = app_strdup("localhost");
-   up->xschemPort = 2022;
+   up->xschemPort = 2021;
    up->userGuide = app_strdup("http://www.rvq.fr/linux/gawman.php");
    up->webSite = app_strdup("http://www.rvq.fr/linux/gaw.php");
    up->text_bg_color = app_strdup("rgb(239,41,41)");
@@ -653,6 +661,7 @@ void up_init_defaults(UserPrefs *up)
    up->angle = app_strdup("0");
    up->date_fmt = app_strdup("%d-%m-%Y %H:%M:%S");
    up->diffdate_fmt = app_strdup("%dd %dh %dm %ds");
+   up->xschemHighlight = 1;
 }
 
 #endif /* THIS_IS_USERPREFS_FILE */

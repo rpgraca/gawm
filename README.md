@@ -64,11 +64,14 @@ Gawm now features a powerful Python integration layer.
 - **Configurable Terminal**: The shell opens in your preferred terminal emulator (set via `up_termCmd` in `gawrc`).
 
 ### Xschem Integration
-Gawm can now interact with **Xschem** for cross-probing.
-- **Cross-Highlighting**: When you highlight a waveform in Gawm (by clicking its trace or signal list entry), Gawm sends a command to Xschem to highlight the corresponding net in the schematic.
-- **Configuration**: The connection settings can be adjusted in your `gawrc` file:
-  - `up_xschemHost`: The hostname where Xschem is running (default: `localhost`).
-  - `up_xschemPort`: The TCP port Xschem is listening on (default: `2022`).
+Gawm can interact with **Xschem** for cross-probing.
+- **Bidirectional Highlight Sync**: Toggling a waveform highlight in Gawm highlights/unhighlights the corresponding net in Xschem. Manual highlights set in Xschem are preserved.
+- **Cursor Annotations**: Right-click a panel to send signal values at a cursor position to Xschem for backannotation display (experimental).
+- Highlight sync can be toggled from **Preferences > Xschem highlight sync**.
+- **Configuration** in `gawrc`:
+  - `up_xschemHost`: Hostname where Xschem is running (default: `localhost`).
+  - `up_xschemPort`: TCP port for `xschem_listen_port` (default: `2021`).
+  - `up_xschemHighlight`: Enable highlight sync (default: `1`).
 
 ## License
 

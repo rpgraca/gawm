@@ -575,6 +575,7 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
       GList *list;
       for (list = wp->vwlist; list; list = list->next) {
          VisibleWave *vw = (VisibleWave *) list->data;
+         if (!vw->shown) continue;
          double yval = wavevar_interp_value(vw->var, csp->xval);
          int wy;
          if (al_label_do_logAxis(lby)) {
@@ -643,6 +644,7 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
       
       for (l1 = wp->vwlist; l1; l1 = l1->next) {
          VisibleWave *vw1 = (VisibleWave *) l1->data;
+         if (!vw1->shown) continue;
          double y1_c0 = wavevar_interp_value(vw1->var, c0->xval);
          double y1_c1 = wavevar_interp_value(vw1->var, c1->xval);
          

@@ -225,6 +225,7 @@ aw_update_from_prefs ( UserData *ud )
    gm_update_toggle_state(ud->group, "ShowGrid", ud->up->showGrid);
    gm_update_toggle_state(ud->group, "Scientific", ud->up->scientific);
    gm_update_toggle_state(ud->group, "AllowResize", ud->up->allowResize);
+   gm_update_toggle_state(ud->group, "XschemHighlight", ud->up->xschemHighlight);
    gm_update_toggle_state(ud->group, "BarStyle", ud->up->toolBarStyle);
    gtk_toolbar_set_style(GTK_TOOLBAR(ud->toolBar), (GtkToolbarStyle) ud->up->toolBarStyle );
 }

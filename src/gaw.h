@@ -287,7 +287,9 @@ void ap_remove_all_wave_if_var_name( UserData *ud, WaveVar *var);
 void ap_set_xvals(UserData *ud);
 
 void gaw_show_about_dialog (GtkWidget *parent);
-void aw_xschem_highlight_wave(VisibleWave *vw);
+void aw_xschem_sync_highlights(UserData *ud);
+void aw_xschem_annotate_at_cursor(UserData *ud, int cursor_idx);
+void aw_xschem_clear_annotations(UserData *ud);
 
 void aio_create_channel(UserData *ud);
 void aio_destroy_channel(UserData *ud);

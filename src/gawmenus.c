@@ -415,6 +415,17 @@ void aw_show_grid_cmd (UserData *ud, int on )
    aw_grid_panels_set ( ud );
 }
 
+static void
+aw_xschem_highlight_gaction (GSimpleAction *action, GVariant *param, gpointer user_data)
+{
+   UserData *ud = (UserData *) user_data;
+   GVariant *state = g_action_get_state (G_ACTION (action));
+   ud->up->xschemHighlight = ! g_variant_get_boolean (state);
+   g_action_change_state (G_ACTION (action),
+                g_variant_new_boolean (ud->up->xschemHighlight));
+   g_variant_unref (state);
+}
+
 static void aw_pop_show_grid_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    WavePanel *wp = (WavePanel *) user_data;
@@ -445,6 +456,30 @@ static void aw_pop_add_panel_below_gaction (GSimpleAction *action, GVariant *par
    WavePanel *wp = (WavePanel *) user_data;
    if ( wp ) {
       ap_panel_add_line( wp->ud, wp, 1);
+   }
+}
+
+static void aw_pop_annotate_cursor0_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
+{
+   WavePanel *wp = (WavePanel *) user_data;
+   if ( wp ) {
+      aw_xschem_annotate_at_cursor(wp->ud, 0);
+   }
+}
+
+static void aw_pop_annotate_cursor1_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
+{
+   WavePanel *wp = (WavePanel *) user_data;
+   if ( wp ) {
+      aw_xschem_annotate_at_cursor(wp->ud, 1);
+   }
+}
+
+static void aw_pop_clear_annotations_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
+{
+   WavePanel *wp = (WavePanel *) user_data;
+   if ( wp ) {
+      aw_xschem_clear_annotations(wp->ud);
    }
 }
 
@@ -980,6 +1015,10 @@ static const gchar gaw_menubar[] =
 "          <attribute name='label' translatable='yes'>Scientific conversion</attribute>"
 "          <attribute name='action'>gaw.Scientific</attribute>"
 "        </item>"
+"        <item>"
+"          <attribute name='label' translatable='yes'>Xschem highlight sync</attribute>"
+"          <attribute name='action'>gaw.XschemHighlight</attribute>"
+"        </item>"
 "      </section>"
 "      <section>"
 "        <item>"
@@ -1094,6 +1133,7 @@ static TooltipInfo menubarTip[] = {
    { "Ydiff", N_("show Y diff measure"), N_("show Y diff measure buttons"), NULL  },
    { "ShowGrid", N_("Show Grid"), N_("Show Grid in panels"), NULL  },
    { "Scientific", N_("Scientific conversion"), N_("Use Scientific conversion mode"), NULL  },
+   { "XschemHighlight", N_("Xschem highlight sync"), N_("Sync wave highlights to xschem schematic editor"), NULL  },
    { "PanelColor", N_("Change panel Colors..."), N_("Change colors used in panel drawing area"), NULL  },
    { "AllowResize", N_("Allow Resize"), N_("Allow Resize the main window"), NULL  },
 
@@ -1172,6 +1212,7 @@ static GActionEntry toggle_entries[] = {
    { "Ydiff", aw_ydiff_gaction, NULL, "false", NULL  },
    { "LogYPanel", aw_logy_selected_gaction, NULL, "true", NULL  },
    { "LogX", aw_logx_gaction, NULL, "false", NULL  },
+   { "XschemHighlight", aw_xschem_highlight_gaction, NULL, "true", NULL  },
 };
 
 
@@ -1493,6 +1534,20 @@ static const gchar panelPopup[] =
 "        <attribute name='icon'>gtk-delete</attribute>"
 "      </item>"
 "    </section>"
+"    <section>"
+"      <item>"
+"        <attribute name='label' translatable='yes'>Annotate Cursor 0 on Xschem</attribute>"
+"        <attribute name='action'>gaw.pAnnotateCursor0</attribute>"
+"      </item>"
+"      <item>"
+"        <attribute name='label' translatable='yes'>Annotate Cursor 1 on Xschem</attribute>"
+"        <attribute name='action'>gaw.pAnnotateCursor1</attribute>"
+"      </item>"
+"      <item>"
+"        <attribute name='label' translatable='yes'>Clear Xschem Annotations</attribute>"
+"        <attribute name='action'>gaw.pClearAnnotations</attribute>"
+"      </item>"
+"    </section>"
 "  </menu>"
 "  <menu id='paneltextpopup'>"
 "    <section>"
@@ -1534,6 +1589,9 @@ static GActionEntry pop_entries[] = {
    { "pZoomDialog", az_pop_zoom_dialog_gaction, NULL, NULL, NULL  },
    { "pZoomIn", az_pop_zoom_in_gaction, NULL, NULL, NULL  },
    { "pAddPanelAbove", aw_pop_add_panel_above_gaction, NULL, NULL, NULL  },
+   { "pAnnotateCursor0", aw_pop_annotate_cursor0_gaction, NULL, NULL, NULL  },
+   { "pAnnotateCursor1", aw_pop_annotate_cursor1_gaction, NULL, NULL, NULL  },
+   { "pClearAnnotations", aw_pop_clear_annotations_gaction, NULL, NULL, NULL  },
 };
 
 static GActionEntry pop_toggle_entries[] = {
