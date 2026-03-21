@@ -66,7 +66,7 @@ Gawm now features a powerful Python integration layer.
 ### Xschem Integration
 Gawm can interact with **Xschem** for cross-probing.
 - **Bidirectional Highlight Sync**: Toggling a waveform highlight in Gawm highlights/unhighlights the corresponding net in Xschem. Manual highlights set in Xschem are preserved.
-- **Cursor Annotations**: Right-click a panel to send signal values at a cursor position to Xschem for backannotation display (experimental).
+- **Cursor Annotations**: Right-click a panel to send all signal values at a cursor position to Xschem for backannotation display on the schematic.
 - Highlight sync can be toggled from **Preferences > Xschem highlight sync**.
 - **Configuration** in `gawrc`:
   - `up_xschemHost`: Hostname where Xschem is running (default: `localhost`).

@@ -274,17 +274,22 @@ void aw_xschem_sync_highlights(UserData *ud)
 
 /*
  * Send signal values at a cursor position to xschem for backannotation.
- * Populates ngspice::ngspice_data array and triggers redraw.
+ * Writes a temporary ASCII raw OP file with interpolated values,
+ * then uses xschem's annotate_op to load it through the proper pipeline
+ * (extra_rawfile -> update_op -> draw), which populates cursor_b_val[].
  * cursor_idx: 0 or 1 (which cursor to read X position from)
  */
 void aw_xschem_annotate_at_cursor(UserData *ud, int cursor_idx)
 {
    UserPrefs *up = ud->up;
    SockCon *cnx;
-   GList *plist, *wlist;
-   char cmd[8192];
+   GList *dlist;
+   char cmd[512];
    int len;
    AWCursor *csp;
+   FILE *fp;
+   const char *tmpfile = "/tmp/gawm_annotate.raw";
+   int t, j;
 
    if (!up->xschemHost || up->xschemPort <= 0) return;
    if (cursor_idx < 0 || cursor_idx > 1) return;
@@ -292,6 +297,72 @@ void aw_xschem_annotate_at_cursor(UserData *ud, int cursor_idx)
    csp = ud->cursors[cursor_idx];
    if (!csp->shown) return;
 
+   /* Count all variables across all loaded data files (skip independent var at idx 0) */
+   int nvars = 0;
+   for (dlist = ud->wdata_list; dlist; dlist = dlist->next) {
+      DataFile *wdata = (DataFile *) dlist->data;
+      WaveTable *wt = wdata->wt;
+      for (t = 0; t < wt->ntables; t++) {
+         WDataSet *wds = wavetable_get_dataset(wt, t);
+         if (wds && wds->nrows > 0)
+            nvars += wds->numVars - 1; /* skip independent variable */
+      }
+   }
+   if (nvars == 0) return;
+
+   /* Write temporary ASCII raw file in ngspice OP format */
+   fp = fopen(tmpfile, "w");
+   if (!fp) return;
+
+   fprintf(fp, "Title: gawm cursor annotation\n");
+   fprintf(fp, "Date: -\n");
+   fprintf(fp, "Plotname: Operating Point\n");
+   fprintf(fp, "Flags: real\n");
+   fprintf(fp, "No. Variables: %d\n", nvars);
+   fprintf(fp, "No. Points: 1\n");
+   fprintf(fp, "Variables:\n");
+
+   int idx = 0;
+   for (dlist = ud->wdata_list; dlist; dlist = dlist->next) {
+      DataFile *wdata = (DataFile *) dlist->data;
+      WaveTable *wt = wdata->wt;
+      for (t = 0; t < wt->ntables; t++) {
+         WDataSet *wds = wavetable_get_dataset(wt, t);
+         if (!wds || wds->nrows <= 0) continue;
+         for (j = 1; j < wds->numVars; j++) {
+            WaveVar *var = (WaveVar *) dataset_get_wavevar(wds, j);
+            char *varName = var->varName;
+            const char *type = "voltage";
+            if (varName[0] == 'i' || varName[0] == 'I') type = "current";
+            fprintf(fp, "\t%d\t%s\t%s\n", idx, varName, type);
+            idx++;
+         }
+      }
+   }
+
+   fprintf(fp, "Values:\n");
+   idx = 0;
+   for (dlist = ud->wdata_list; dlist; dlist = dlist->next) {
+      DataFile *wdata = (DataFile *) dlist->data;
+      WaveTable *wt = wdata->wt;
+      for (t = 0; t < wt->ntables; t++) {
+         WDataSet *wds = wavetable_get_dataset(wt, t);
+         if (!wds || wds->nrows <= 0) continue;
+         for (j = 1; j < wds->numVars; j++) {
+            WaveVar *var = (WaveVar *) dataset_get_wavevar(wds, j);
+            double yval = wavevar_interp_value(var, csp->xval);
+            if (idx == 0)
+               fprintf(fp, " %d\t%.15g\n", 0, yval);
+            else
+               fprintf(fp, "\t%.15g\n", yval);
+            idx++;
+         }
+      }
+   }
+   fprintf(fp, "\n"); /* empty line terminates data block */
+   fclose(fp);
+
+   /* Send annotate_op command to xschem */
    if (!xschem_port_reachable(up->xschemHost, up->xschemPort)) return;
 
    cnx = con_new(up->xschemHost, PF_INET, SOCK_STREAM, IPPROTO_IP, up->xschemPort, CON_CONNECT);
@@ -301,33 +372,7 @@ void aw_xschem_annotate_at_cursor(UserData *ud, int cursor_idx)
    }
 
    len = snprintf(cmd, sizeof(cmd),
-      "namespace eval ngspice {}\n"
-      "array unset ngspice::ngspice_data\n");
-
-   /* Iterate all panels and all visible waves */
-   int nvars = 0;
-   for (plist = ud->panelList; plist; plist = plist->next) {
-      WavePanel *wp = (WavePanel *) plist->data;
-      for (wlist = wp->vwlist; wlist; wlist = wlist->next) {
-         VisibleWave *vw = (VisibleWave *) wlist->data;
-         double yval = wavevar_interp_value(vw->var, csp->xval);
-         char *varName = vw->var->varName;
-
-         /* Set ngspice::ngspice_data(varname) = value
-          * varName is already lowercase from ngspice (e.g., "v(vpd)", "i(vdd)")
-          */
-         len += snprintf(cmd + len, sizeof(cmd) - len,
-            "set ngspice::ngspice_data(%s) %.6g\n", varName, yval);
-         nvars++;
-         if (len >= (int)sizeof(cmd) - 1) break;
-      }
-   }
-
-   /* n\ vars and n\ points: need \\\\ in C to get \\ in Tcl for literal backslash */
-   len += snprintf(cmd + len, sizeof(cmd) - len,
-      "set ngspice::ngspice_data(n\\\\ vars) %d\n"
-      "set ngspice::ngspice_data(n\\\\ points) 1\n"
-      "xschem redraw\n", nvars);
+      "xschem annotate_op %s 0\n", tmpfile);
 
    con_send(cnx, cmd, len, 0);
    con_destroy(cnx);
@@ -349,7 +394,10 @@ void aw_xschem_clear_annotations(UserData *ud)
       con_destroy(cnx);
       return;
    }
-   char cmd[] = "array unset ngspice::ngspice_data\nxschem redraw\n";
+   char cmd[] =
+      "xschem set live_cursor2_backannotate 0\n"
+      "array unset ngspice::ngspice_data\n"
+      "xschem redraw\n";
    con_send(cnx, cmd, strlen(cmd), 0);
    con_destroy(cnx);
 }
