@@ -41,6 +41,7 @@ void pa_panel_construct( WavePanel *wp, UserData *ud)
    app_class_construct( (AppClass *) wp );
 
    wp->ud = ud;
+   wp->pg = ud->ag;
    pa_panel_set_drawing_func(wp, NULL );
    wp->showGrid = up->showGrid;
    wp->drawing = da_drawing_create(wp);
@@ -213,7 +214,7 @@ void pa_panel_set_yvals(WavePanel *wp, double start, double end)
    if ( wp->pPLogY ){
       gtk_widget_set_sensitive (wp->pPLogY, lby->logAble );
    }
-   if ( wp == wp->ud->selected_panel && wp->ud->LogYPanel ){
+   if ( wp == wp->pg->selected_panel && wp->ud->LogYPanel ){
       gtk_widget_set_sensitive (wp->ud->LogYPanel, lby->logAble );
    }
    msg_dbg(" start %f, end %f logable %d", start, end, lby->logAble);
@@ -235,7 +236,7 @@ pa_panel_vw_min_max_update(gpointer p, gpointer d)
    wp->min_xval = MIN( wavevar_ivar_get_min(vw->var), wp->min_xval);
    wp->max_xval = MAX( wavevar_ivar_get_max(vw->var), wp->max_xval);
    /* we should set it to the wds with max xvals */
-   wp->ud->curwds = vw->var->wds;
+   wp->pg->curwds = vw->var->wds;
 
    double min_yval = MIN( wavevar_val_get_min(vw->var), lby->min_val);
    double max_yval = MAX( wavevar_val_get_max(vw->var), lby->max_val);
@@ -254,7 +255,7 @@ pa_panel_update_min_max(WavePanel *wp)
    double min_yval;
    double max_yval; 
    
-   wp->ud->curwds = 0;
+   wp->pg->curwds = 0;
    if ( wp->vwlist ) {
       wp->min_xval = G_MAXDOUBLE;
       wp->max_xval = -G_MAXDOUBLE;
@@ -299,7 +300,7 @@ pa_panel_update_min_max(WavePanel *wp)
 void pa_panel_update_all_data(UserData *ud)
 {
    WavePanel *wp;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    double old_min_x = lbx->min_val;
    double old_max_x = lbx->max_val;
    double min_xval;
@@ -309,7 +310,7 @@ void pa_panel_update_all_data(UserData *ud)
    min_xval =   G_MAXDOUBLE;
    max_xval = - G_MAXDOUBLE;
    
-   list = ud->panelList;
+   list = ud->ag->panelList;
    while (list) {
       GList *next = list->next;
       wp = (WavePanel *) list->data;
@@ -364,14 +365,24 @@ void pa_panel_update_all_data(UserData *ud)
 
 void pa_panel_full_redraw(WavePanel *wp)
 {
+   UserData *ud = wp->ud;
+   PanelGroup *saved_ag = ud->ag;
+
+   /* Temporarily switch to this panel's group so update functions
+    * operate on the correct group's panel list and xLabels. */
+   ud->ag = wp->pg;
+
    /* update max and min values */
    pa_panel_update_min_max(wp);
-   pa_panel_update_all_data(wp->ud);
-   
+   pa_panel_update_all_data(ud);
+
    da_drawing_redraw(wp->drawing);
    /* Update y-axis labels */
    pa_panel_draw_ylabels(wp);
    pa_ylabel_box_show( wp );
+
+   /* Restore active group */
+   ud->ag = saved_ag;
 }
 
 /*
@@ -548,7 +559,7 @@ gint pa_panel_find_pos(WavePanel *wp)
 {
    if ( wp ) {
       UserData *ud = wp->ud;
-      return g_list_index( ud->panelList, wp);    
+      return g_list_index( ud->ag->panelList, wp);    
    }
    return -1;
 }
@@ -556,7 +567,7 @@ gint pa_panel_find_pos(WavePanel *wp)
 WavePanel *
 pa_panel_find_selected(UserData *ud)
 {
-   GList *list = ud->panelList;
+   GList *list = ud->ag->panelList;
    
    while (list) {
       GList *next = list->next;
@@ -572,8 +583,13 @@ pa_panel_find_selected(UserData *ud)
 
 void pa_panel_set_selected( WavePanel *wpsel, UserData *ud )
 {
-   GList *list = ud->panelList;
-   
+   /* Switch active group to match the selected panel's group */
+   if (wpsel && wpsel->pg && wpsel->pg != ud->ag) {
+      aw_set_active_group(ud, wpsel->pg);
+   }
+
+   GList *list = ud->ag->panelList;
+
    while (list) {
       GList *next = list->next;
 
@@ -581,7 +597,7 @@ void pa_panel_set_selected( WavePanel *wpsel, UserData *ud )
       wp->selected = 0;
       if ( wp == wpsel ){
 	 wp->selected = 1;
-	 ud->selected_panel = wp;
+	 ud->ag->selected_panel = wp;
          GAction *action = g_action_map_lookup_action ((GActionMap  *) wp->wpgroup, "pPLogY");
          int toggled = g_variant_get_boolean ( 
                                    g_action_get_state (G_ACTION (action)) );
@@ -604,7 +620,7 @@ void pa_panel_vw_delete(WavePanel *wp)
    while((vw = g_list_nth_data(wp->vwlist, 0)) != NULL) {
       wave_destroy(vw);
    }
-   if ( wp->ud->xLabels ){
+   if ( wp->pg->xLabels ){
       ap_all_redraw(wp->ud);
    }
 }
@@ -674,7 +690,7 @@ void pa_panel_label_size(WavePanel *wp)
       msg_dbg("Y w %d, h %d, lby width %d", lby->w, lby->h, width);
    }
       
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    if ( lbx->w != w ){
       lbx->w = w;
       lbx->h = h;

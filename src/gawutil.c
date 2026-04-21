@@ -239,7 +239,7 @@ void aw_xschem_sync_highlights(UserData *ud)
       "set gawm_net_colors {}\n");
 
    /* For each highlighted wave: set color to match gawm, then highlight */
-   for (plist = ud->panelList; plist; plist = plist->next) {
+   for (plist = ud->ag->panelList; plist; plist = plist->next) {
       WavePanel *wp = (WavePanel *) plist->data;
       for (wlist = wp->vwlist; wlist; wlist = wlist->next) {
          VisibleWave *vw = (VisibleWave *) wlist->data;
@@ -294,7 +294,7 @@ void aw_xschem_annotate_at_cursor(UserData *ud, int cursor_idx)
    if (!up->xschemHost || up->xschemPort <= 0) return;
    if (cursor_idx < 0 || cursor_idx > 1) return;
 
-   csp = ud->cursors[cursor_idx];
+   csp = ud->ag->cursors[cursor_idx];
    if (!csp->shown) return;
 
    /* Count all variables across all loaded data files (skip independent var at idx 0) */

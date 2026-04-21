@@ -133,7 +133,7 @@ void wave_vw_buttons_delete(VisibleWave *vw)
    
    for ( i = 0 ; i < AW_NY_MBTN ; i++ ){
       gtk_widget_destroy(vw->mbtn[i]->button); /* kills the child label also */
-      ud->all_measure_buttons = g_list_remove(ud->all_measure_buttons,
+      ud->ag->all_measure_buttons = g_list_remove(ud->ag->all_measure_buttons,
 					      vw->mbtn[i]);
       g_free(vw->mbtn[i]);
    }
@@ -228,7 +228,7 @@ void wave_vw_buttons_create(VisibleWave *vw )
       
       vw->mbtn[i] = g_new0(MeasureBtn, 1);
       vw->mbtn[i]->var = var;
-      ud->all_measure_buttons = g_list_prepend(ud->all_measure_buttons,
+      ud->ag->all_measure_buttons = g_list_prepend(ud->ag->all_measure_buttons,
 					       vw->mbtn[i]);
 
       if ( i == 2 ){
@@ -245,7 +245,7 @@ void wave_vw_buttons_create(VisibleWave *vw )
 //      gtk_widget_set_usize(button, 60, -1);
      
       vw->mbtn[i]->button = button;
-      vw->mbtn[i]->csp = ud->cursors[i];
+      vw->mbtn[i]->csp = ud->ag->cursors[i];
       ap_mbtn_update(vw->mbtn[i], ud);
    }
 }

@@ -676,7 +676,7 @@ datafile_similar_vars_add (DataFile *wdata, WaveVar *var)
 {
    UserData *ud = ( UserData *) wdata->ud;
    
-   if ( ud->selected_panel  == NULL) {
+   if ( ud->ag->selected_panel  == NULL) {
       msg_info (aw_panel_not_selected_msg);
       return ;
    }

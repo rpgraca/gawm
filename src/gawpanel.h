@@ -10,6 +10,7 @@
 
 #include <appclass.h>
 
+typedef struct _PanelGroup PanelGroup;
 typedef struct _WavePanel WavePanel;
 typedef struct _VisibleWave VisibleWave;
 typedef void (*WaveDraw_FP) (VisibleWave *vw, WavePanel *wp);
@@ -17,6 +18,7 @@ typedef void (*WaveDraw_FP) (VisibleWave *vw, WavePanel *wp);
 struct _WavePanel {
    AppClass parent;
    UserData *ud;           /* pointer to application data */
+   PanelGroup *pg;         /* pointer to parent panel group */
    GtkWidget *lmtopbox;    /* the box at top of lmswtable */
    GtkWidget *drawing;     /* DrawingArea for waveforms */
    GSimpleActionGroup *wpgroup;  /* the panel action group */

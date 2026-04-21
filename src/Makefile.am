@@ -11,10 +11,10 @@ gawm_SOURCES = gawmain.c gawapp.c userprefs.c gawzoom.c gawmisc.c \
               gawcolor.c gawfile.c gawdnd.c gawda.c gawpanel.c \
 	      gawcursor.c gawwave.c gawgrip.c gawlabel.c gawhelp.c \
 	      gaw.h userprefs.h gawpixmaps.h datafile.h gawdnd.h \
-	      gawda.h gawpanel.h gawcursor.h gawwave.h gawgrip.h \
+	      gawda.h gawpanel.h gawpgroup.h gawcursor.h gawwave.h gawgrip.h \
 	      gawlabel.h gawmisc.h gawsnd.h gawtext.c gawtext.h \
-              gawdraw.c gawdraw.h gawutil.c gawutil.h gawmenus.c \
-              gawmenus.h
+              gawdraw.c gawdraw.h gawutil.c gawutil.h gawpgroup.c \
+              gawmenus.c gawmenus.h
 
 INCLUDES = -I$(top_srcdir)/lib @GAW_CFLAGS@
 gawm_LDADD = $(top_srcdir)/lib/libload.a \

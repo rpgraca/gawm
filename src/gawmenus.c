@@ -51,7 +51,7 @@ aw_factory_settings_gaction (GSimpleAction *action, GVariant *param, gpointer us
 void aw_save_config_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    UserData *ud = (UserData *) user_data;
-   ud->up->npanels = g_list_length( ud->panelList);
+   ud->up->npanels = g_list_length( ud->ag->panelList);
 
    if ( ud->listFiles ){
       app_dup_str( &ud->up->lastDataFile, (char *) g_slist_nth_data ( ud->listFiles, 0 ) );
@@ -213,7 +213,7 @@ aw_showXlabel_gaction (GSimpleAction *action, GVariant *param, gpointer user_dat
    g_variant_unref (state);
    
 //   msg_dbg ("Action showXlabel %d", ud->up->showXLabels );
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created */
    }
    ap_xlabel_box_show(ud);
@@ -231,11 +231,11 @@ aw_showYlabel_gaction (GSimpleAction *action, GVariant *param, gpointer user_dat
 
 //   msg_dbg ("Action showYlabel %d", ud->up->showYLabels );
    /*  this happen when setting default value from rc */
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created  */
    }
 
-   g_list_foreach(ud->panelList, (GFunc) pa_ylabel_box_show, NULL );
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_ylabel_box_show, NULL );
 }
 static void
 aw_showMoreYlabel_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
@@ -249,10 +249,10 @@ aw_showMoreYlabel_gaction (GSimpleAction *action, GVariant *param, gpointer user
 //   msg_dbg ("Action showMoreYlabel %d", ud->up->showMoreYLabels );
 
    /*  this happen when setting default value from rc */
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created  */
    }
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_label_meas_box_update, NULL );
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_label_meas_box_update, NULL );
    ap_all_redraw(ud);
 }
 
@@ -266,11 +266,11 @@ aw_scientific_gaction (GSimpleAction *action, GVariant *param, gpointer user_dat
                 g_variant_new_boolean (ud->up->scientific));
    g_variant_unref (state);
 
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created */
    }
    msg_dbg ("ud->up->scientific = %d", ud->up->scientific);
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_label_size, NULL );
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_label_size, NULL );
    ap_all_redraw(ud);
    ap_mbtn_update_all(ud);
    ap_xmeasure_button_draw(ud);
@@ -286,11 +286,11 @@ aw_logx_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
                 g_variant_new_boolean (ud->up->setLogX));
    g_variant_unref (state);
 
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created */
    }
    msg_dbg ("userPrefs->setLogX = %d", ud->up->setLogX);
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    al_label_set_logAxis( lbx, ud->up->setLogX);
    az_cmd_zoom_absolute(ud, lbx->start_val, lbx->end_val );
 
@@ -307,7 +307,7 @@ aw_ydiff_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
                 g_variant_new_boolean (ud->up->showYDiff));
    g_variant_unref (state);
 
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created */
    }
    ap_mbtn_update_all(ud);
@@ -331,7 +331,7 @@ static void
 aw_logy_selected_gaction (GSimpleAction *action, GVariant *param, gpointer user_data  )
 {
    UserData *ud = (UserData *) user_data;
-   WavePanel *wp = ud->selected_panel;
+   WavePanel *wp = ud->ag->selected_panel;
    static int toggled;
       
    GVariant *state = g_action_get_state (G_ACTION (action));
@@ -369,7 +369,7 @@ aw_pop_logy_gaction (GSimpleAction *action, GVariant *param, gpointer user_data 
       g_variant_unref (state);
 
       aw_logy_panel_set (wp, active );
-      if ( wp->ud->selected_panel == wp ) {
+      if ( wp->pg->selected_panel == wp ) {
 	 gm_update_toggle_state(wp->ud->group, "LogYPanel", active);
       }
    }
@@ -379,7 +379,7 @@ aw_pop_logy_gaction (GSimpleAction *action, GVariant *param, gpointer user_data 
 static void
 aw_grid_panels_set (UserData *ud )
 {
-   GList *list = ud->panelList;
+   GList *list = ud->ag->panelList;
    while (list) {
       GList *next = list->next;
 
@@ -401,7 +401,7 @@ aw_show_grid_gaction (GSimpleAction *action, GVariant *param, gpointer user_data
                 g_variant_new_boolean (ud->up->showGrid));
    g_variant_unref (state);
 
-   if ( ud->xlabel_box == NULL ){ 
+   if ( ud->ag->xlabel_box == NULL ){ 
       return; /* widget not yet created */
    }
    aw_grid_panels_set ( ud );
@@ -589,6 +589,134 @@ void aw_reload_all_files_gaction (GSimpleAction *action, GVariant *param, gpoint
    g_list_foreach(ud->wdata_list, (GFunc) ap_reload_wave_file, NULL);
 }
 
+/*
+ * Tab and Group management actions
+ */
+static void
+aw_new_tab_gaction (GSimpleAction *action, GVariant *param, gpointer user_data)
+{
+   UserData *ud = (UserData *) user_data;
+   int ntabs = g_list_length(ud->tabList);
+   char name[64];
+   sprintf(name, _("Tab %d"), ntabs + 1);
+
+   GawTab *tab = aw_tab_new(ud, name);
+   ud->tabList = g_list_append(ud->tabList, tab);
+
+   PanelGroup *pg = aw_tab_add_group(tab, _("Default"));
+
+   /* save current active group, set new group as active for widget creation */
+   PanelGroup *prev_ag = ud->ag;
+   ud->ag = pg;
+
+   pg_group_build_widgets(pg);
+   gtk_box_pack_start(GTK_BOX(tab->tab_content), pg->groupBox, TRUE, TRUE, 0);
+
+   gint page = gtk_notebook_append_page(GTK_NOTEBOOK(ud->notebook),
+                                         tab->tab_content,
+                                         gtk_label_new(tab->name));
+   gtk_notebook_set_show_tabs(GTK_NOTEBOOK(ud->notebook),
+                              g_list_length(ud->tabList) > 1);
+
+   /* create initial panels in the new group */
+   int i;
+   for (i = 0; i < ud->reqpanels; i++) {
+      ap_panel_add_line(ud, NULL, 0);
+   }
+
+   /* switch to the new tab */
+   gtk_notebook_set_current_page(GTK_NOTEBOOK(ud->notebook), page);
+   /* aw_notebook_switch_page_cb will update ud->active_tab and ud->ag */
+}
+
+static void
+aw_close_tab_gaction (GSimpleAction *action, GVariant *param, gpointer user_data)
+{
+   UserData *ud = (UserData *) user_data;
+
+   /* don't allow closing the last tab */
+   if (g_list_length(ud->tabList) <= 1) {
+      aw_dialog_show(AW_MSG_OK, _("Cannot close the last tab."));
+      return;
+   }
+
+   GawTab *tab = ud->active_tab;
+   gint page = g_list_index(ud->tabList, tab);
+
+   /* remove from notebook */
+   gtk_notebook_remove_page(GTK_NOTEBOOK(ud->notebook), page);
+
+   /* remove from tab list */
+   ud->tabList = g_list_remove(ud->tabList, tab);
+
+   /* destroy tab and all its groups */
+   aw_tab_destroy(tab);
+
+   /* switch to first remaining tab */
+   gtk_notebook_set_current_page(GTK_NOTEBOOK(ud->notebook), 0);
+   gtk_notebook_set_show_tabs(GTK_NOTEBOOK(ud->notebook),
+                              g_list_length(ud->tabList) > 1);
+}
+
+static void
+aw_new_group_gaction (GSimpleAction *action, GVariant *param, gpointer user_data)
+{
+   UserData *ud = (UserData *) user_data;
+   GawTab *tab = ud->active_tab;
+   if (!tab) return;
+
+   int ngroups = g_list_length(tab->groupList);
+   char name[64];
+   sprintf(name, _("Group %d"), ngroups + 1);
+
+   PanelGroup *pg = aw_tab_add_group(tab, name);
+
+   /* set as active for widget creation */
+   ud->ag = pg;
+
+   pg_group_build_widgets(pg);
+   gtk_box_pack_start(GTK_BOX(tab->tab_content), pg->groupBox, TRUE, TRUE, 0);
+
+   /* create initial panels */
+   int i;
+   for (i = 0; i < ud->reqpanels; i++) {
+      ap_panel_add_line(ud, NULL, 0);
+   }
+
+   /* keep new group active */
+   tab->active_group = pg;
+}
+
+static void
+aw_close_group_gaction (GSimpleAction *action, GVariant *param, gpointer user_data)
+{
+   UserData *ud = (UserData *) user_data;
+   GawTab *tab = ud->active_tab;
+   if (!tab) return;
+
+   /* don't allow closing the last group */
+   if (g_list_length(tab->groupList) <= 1) {
+      aw_dialog_show(AW_MSG_OK, _("Cannot close the last panel group."));
+      return;
+   }
+
+   PanelGroup *pg = tab->active_group;
+
+   /* remove group's widget from tab content */
+   if (pg->groupBox) {
+      gtk_container_remove(GTK_CONTAINER(tab->tab_content), pg->groupBox);
+   }
+
+   /* remove from group list */
+   tab->groupList = g_list_remove(tab->groupList, pg);
+
+   pg_group_destroy(pg);
+
+   /* switch to first remaining group */
+   tab->active_group = (PanelGroup *) tab->groupList->data;
+   ud->ag = tab->active_group;
+}
+
 /****************************************************************/
 /*
  * menu stuff for main window and main menu
@@ -623,6 +751,24 @@ static const gchar main_builder[] =
 "            <property name='icon-name'>edit-clear-symbolic</property>"
 "            <property name='action-name'>gaw.TDeletePanel</property>"
 "            <property name='tooltip-text' translatable='yes'>Remove selected or last panel</property>"
+"            <property name='visible'>True</property>"
+"          </object>"
+"        </child>"
+"        <child>"
+"          <object class='GtkToolButton' id='TNewTab'>"
+"            <property name='label' translatable='yes'>New Tab</property>"
+"            <property name='icon-name'>tab-new-symbolic</property>"
+"            <property name='action-name'>gaw.NewTab</property>"
+"            <property name='tooltip-text' translatable='yes'>Create a new tab</property>"
+"            <property name='visible'>True</property>"
+"          </object>"
+"        </child>"
+"        <child>"
+"          <object class='GtkToolButton' id='TNewGroup'>"
+"            <property name='label' translatable='yes'>New Group</property>"
+"            <property name='icon-name'>view-dual-symbolic</property>"
+"            <property name='action-name'>gaw.NewGroup</property>"
+"            <property name='tooltip-text' translatable='yes'>Add a panel group with independent X axis</property>"
 "            <property name='visible'>True</property>"
 "          </object>"
 "        </child>"
@@ -713,19 +859,6 @@ static const gchar main_builder[] =
 "      </packing>"
 "    </child>"
 "    <child>"
-"      <object class='GtkBox' id='meas_hbox'>"
-"        <property name='can_focus'>False</property>"
-"        <property name='orientation'>horizontal</property>"
-"        <property name='spacing'>0</property>"
-"      </object>"
-"      <packing>"
-"        <property name='left-attach'>0</property>"
-"        <property name='top-attach'>2</property>"
-"        <property name='width'>2</property>"
-"        <property name='height'>1</property>"
-"      </packing>"
-"    </child>"
-"    <child>"
 "      <object class='GtkPaned' id='hpaned'>"
 "        <property name='orientation'>horizontal</property>"
 "        <property name='position'>180</property>"
@@ -747,37 +880,10 @@ static const gchar main_builder[] =
 "            <property name='shrink'>False</property>"
 "          </packing>"
 "        </child>"
-"        <child>"
-"          <object class='GtkScrolledWindow' id='sw'>"
-"            <property name='shadow-type'>in</property>"
-"            <property name='visible'>True</property>"
-"            <property name='halign'>fill</property>"
-"            <property name='valign'>fill</property>"
-"            <property name='hexpand'>True</property>"
-"            <property name='vexpand'>True</property>"
-"          </object>"
-"          <packing>"
-"            <property name='resize'>True</property>"
-"            <property name='shrink'>False</property>"
-"          </packing>"
-"        </child>"
 "      </object>"
 "      <packing>"
 "        <property name='left-attach'>0</property>"
-"        <property name='top-attach'>3</property>"
-"        <property name='width'>2</property>"
-"        <property name='height'>1</property>"
-"      </packing>"
-"    </child>"
-"    <child>"
-"      <object class='GtkEventBox' id='xlabel_ev_box'>"
-"        <property name='halign'>fill</property>"
-"        <property name='hexpand'>True</property>"
-"        <property name='visible'>True</property>"
-"      </object>"
-"      <packing>"
-"        <property name='left-attach'>0</property>"
-"        <property name='top-attach'>4</property>"
+"        <property name='top-attach'>2</property>"
 "        <property name='width'>2</property>"
 "        <property name='height'>1</property>"
 "      </packing>"
@@ -790,8 +896,8 @@ static const gchar main_builder[] =
 "      </object>"
 "      <packing>"
 "        <property name='left-attach'>0</property>"
-"        <property name='top-attach'>5</property>"
-"        <property name='width'>1</property>"
+"        <property name='top-attach'>3</property>"
+"        <property name='width'>2</property>"
 "        <property name='height'>1</property>"
 "      </packing>"
 "    </child>"
@@ -868,6 +974,30 @@ static const gchar gaw_menubar[] =
 "          <attribute name='action'>gaw.RedrawAll</attribute>"
 "          <attribute name='icon'>view-refresh-symbolic</attribute>"
 "          <attribute name='accel'>&lt;control&gt;A</attribute>"
+"        </item>"
+"      </section>"
+"      <section>"
+"        <item>"
+"          <attribute name='label' translatable='yes'>New Tab</attribute>"
+"          <attribute name='action'>gaw.NewTab</attribute>"
+"          <attribute name='accel'>&lt;control&gt;T</attribute>"
+"          <attribute name='icon'>tab-new-symbolic</attribute>"
+"        </item>"
+"        <item>"
+"          <attribute name='label' translatable='yes'>Close Tab</attribute>"
+"          <attribute name='action'>gaw.CloseTab</attribute>"
+"          <attribute name='accel'>&lt;control&gt;W</attribute>"
+"          <attribute name='icon'>window-close-symbolic</attribute>"
+"        </item>"
+"        <item>"
+"          <attribute name='label' translatable='yes'>New Panel Group</attribute>"
+"          <attribute name='action'>gaw.NewGroup</attribute>"
+"          <attribute name='icon'>view-dual-symbolic</attribute>"
+"        </item>"
+"        <item>"
+"          <attribute name='label' translatable='yes'>Close Panel Group</attribute>"
+"          <attribute name='action'>gaw.CloseGroup</attribute>"
+"          <attribute name='icon'>edit-clear-symbolic</attribute>"
 "        </item>"
 "      </section>"
 "      <section>"
@@ -1197,6 +1327,10 @@ static GActionEntry entries[] = {
    { "Quit", activate_gaction, NULL, NULL, NULL  },
    { "TDeleteWave", aw_delete_all_wave_gaction, NULL, NULL, NULL  },
    { "About", aw_show_about_gaction, NULL, NULL, NULL  },
+   { "NewTab", aw_new_tab_gaction, NULL, NULL, NULL  },
+   { "CloseTab", aw_close_tab_gaction, NULL, NULL, NULL  },
+   { "NewGroup", aw_new_group_gaction, NULL, NULL, NULL  },
+   { "CloseGroup", aw_close_group_gaction, NULL, NULL, NULL  },
 };
 
 static GActionEntry toggle_entries[] = {
@@ -1369,11 +1503,8 @@ void gm_create_layout (UserData *ud)
    
    grid = (GtkWidget *) gtk_builder_get_object (builder, "grid");
    ud->toolBar = (GtkWidget *) gtk_builder_get_object (builder, "toolbar");
-   ud->meas_hbox = (GtkWidget *) gtk_builder_get_object (builder, "meas_hbox");
-   ud->panel_scrolled = (GtkWidget *) gtk_builder_get_object (builder, "sw");
    ud->hpaned = (GtkWidget *) gtk_builder_get_object (builder, "hpaned");
    ud->siglist_scrolled = (GtkWidget *) gtk_builder_get_object (builder, "siglist_scrolled");
-   ud->xlabel_ev_box = (GtkWidget *) gtk_builder_get_object (builder, "xlabel_ev_box");
    ud->statusbar = (GtkWidget *) gtk_builder_get_object (builder, "statusbar");
    ud->globalTable = g_object_ref (grid);
 

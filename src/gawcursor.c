@@ -23,15 +23,15 @@
 
 void cu_cursor_clear(UserData *ud, int i)
 {
-   AWCursor *csp = ud->cursors[i];
+   AWCursor *csp = ud->ag->cursors[i];
  
    if ( csp->shown == 0 ) {
       return;
    }
-   ud->cursors[2]->shown = 0;
+   ud->ag->cursors[2]->shown = 0;
    csp->shown = 0;
    /* undraw the cursor line */
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_drawing_redraw, NULL);
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_drawing_redraw, NULL);
 
    ap_xmeasure_button_show(ud);
    ap_mbtn_update_all(ud);
@@ -42,7 +42,7 @@ void cu_clear_cursors(UserData *ud)
    int i;
 
    for ( i = 0 ; i < AW_NX_MBTN ; i++ ) {
-      ud->cursors[i]->shown = 0;
+      ud->ag->cursors[i]->shown = 0;
    }
    ap_xmeasure_button_show(ud);
    ap_mbtn_update_all(ud);
@@ -51,18 +51,18 @@ void cu_clear_cursors(UserData *ud)
 
 void cu_update_xcursor(WavePanel *wp, AWCursor *csp, int x, int redraw)
 {
-   UserData  *ud = wp->ud;
+   PanelGroup *pg = wp->pg;
    AWCursor *csp1;
-   GawLabels *lbx = wp->ud->xLabels;
+   GawLabels *lbx = pg->xLabels;
 
    csp->shown = 1;
    /* Track the last dragged cursor index */
-   if (csp == ud->cursors[0]) {
-      ud->last_dragged_cursor = 0;
-   } else if (csp == ud->cursors[1]) {
-      ud->last_dragged_cursor = 1;
+   if (csp == pg->cursors[0]) {
+      pg->last_dragged_cursor = 0;
+   } else if (csp == pg->cursors[1]) {
+      pg->last_dragged_cursor = 1;
    }
-   
+
    int zoom = csp->zoom;
    if ( csp->zoom ) {
       /* put the cursor at prev xval value */
@@ -75,16 +75,16 @@ void cu_update_xcursor(WavePanel *wp, AWCursor *csp, int x, int redraw)
    msg_dbg("xval %f x %d zoom %d 0x%lx", csp->xval, csp->x, zoom, (unsigned long ) csp);
 
    if ( redraw ) {
-      /* draw cursor in each panel */
-      g_list_foreach(ud->panelList, (GFunc) pa_panel_drawing_redraw, NULL);
+      /* draw cursor in each panel of this group */
+      g_list_foreach(pg->panelList, (GFunc) pa_panel_drawing_redraw, NULL);
    }
-   
-   csp = ud->cursors[0];
-   csp1 = ud->cursors[1];
+
+   csp = pg->cursors[0];
+   csp1 = pg->cursors[1];
    if (  csp->shown && csp1->shown ) {
-      ud->cursors[2]->shown = 1;
-      ud->cursors[2]->x = csp1->x -  csp->x;
-      ud->cursors[2]->xval = csp1->xval -  csp->xval;
+      pg->cursors[2]->shown = 1;
+      pg->cursors[2]->x = csp1->x -  csp->x;
+      pg->cursors[2]->xval = csp1->xval -  csp->xval;
    }
 
    /* show label */
@@ -96,14 +96,13 @@ void cu_update_xcursor(WavePanel *wp, AWCursor *csp, int x, int redraw)
 
 void cu_display_xcursor(WavePanel *wp, gint button, int x, int redraw)
 {
-   UserData  *ud = wp->ud;
    AWCursor *csp;
 
 //   msg_dbg("display at x %d", x);
    if ( button < 1 || button > 2 ) {
       return;
    }
-   csp = ud->cursors[button - 1];
+   csp = wp->pg->cursors[button - 1];
    if ( x == csp->x && csp->shown ) {
       return;
    }
@@ -133,21 +132,21 @@ void cu_cursor_clear_cursors_gaction (GSimpleAction *action, GVariant *param, gp
 void cu_cursor_set_cursor0_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    UserData *ud = (UserData *) user_data;
-   WavePanel *wp = (WavePanel *) g_list_nth_data (ud->panelList, 0);
-   cu_display_xcursor(wp, 1, ud->cursors[0]->x, 1);
+   WavePanel *wp = (WavePanel *) g_list_nth_data (ud->ag->panelList, 0);
+   cu_display_xcursor(wp, 1, ud->ag->cursors[0]->x, 1);
 }
 
 void cu_cursor_set_cursor1_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    UserData *ud = (UserData *) user_data;
-   WavePanel *wp = (WavePanel *) g_list_nth_data (ud->panelList, 0);
-   cu_display_xcursor(wp, 2, ud->cursors[1]->x, 1);
+   WavePanel *wp = (WavePanel *) g_list_nth_data (ud->ag->panelList, 0);
+   cu_display_xcursor(wp, 2, ud->ag->cursors[1]->x, 1);
 }
 
 void cu_cursor_set_cursors_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    UserData *ud = (UserData *) user_data;
-   WavePanel *wp = (WavePanel *) g_list_nth_data (ud->panelList, 0);
-   cu_display_xcursor(wp, 1, ud->cursors[0]->x, 0);
-   cu_display_xcursor(wp, 2, ud->cursors[1]->x, 1);
+   WavePanel *wp = (WavePanel *) g_list_nth_data (ud->ag->panelList, 0);
+   cu_display_xcursor(wp, 1, ud->ag->cursors[0]->x, 0);
+   cu_display_xcursor(wp, 2, ud->ag->cursors[1]->x, 1);
 }

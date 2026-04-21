@@ -22,10 +22,10 @@ int ag_grip_panel_width (UserData *ud, char *text )
    int width;
 
    width = ud->winWidth - 2 * WIN_BORDER_SIZE - 2 - ud->up->lmtableWidth;
-   if ( ud->xLabels->changed & CV_SBSHOW ){
-      width -= ud->sbSize;
+   if ( ud->ag->xLabels->changed & CV_SBSHOW ){
+      width -= ud->ag->sbSize;
    }
-   sprintf (text, _("Panel size w %d h %d"), width, ud->panelHeight);
+   sprintf (text, _("Panel size w %d h %d"), width, ud->ag->panelHeight);
    return width;
 }
 
@@ -86,7 +86,7 @@ ag_grip_motion_cb (GtkWidget *widget, GdkEventMotion *event, gpointer data )
       int width = ag_grip_panel_width ( ud, text ); 
 
       if ( width >= up->minPanelWidth ) {
-	 g_list_foreach(ud->panelList, (GFunc) pa_panel_lmscroll_win_set_size_request, NULL);
+	 g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_lmscroll_win_set_size_request, NULL);
 
 	gtk_label_set_text ( GTK_LABEL(ud->statusLabel), text);
       }

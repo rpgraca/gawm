@@ -25,7 +25,7 @@
 gint az_cmd_zoom_absolute(UserData *ud, double start, double end )
 {
    double scroll_start, scroll_end;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    
    msg_dbg("start %f  end %f", start, end);
    /* set starting drawn x-value */
@@ -64,22 +64,22 @@ gint az_cmd_zoom_absolute(UserData *ud, double start, double end )
       scroll_end   = ( lbx->end_val   - lbx->min_val ) /
 	 ( lbx->max_val - lbx->min_val );
    }
-   if ( ud->xadj == NULL || lbx->wh == 0 ) {
+   if ( ud->ag->xadj == NULL || lbx->wh == 0 ) {
        return 0;
    }
    gdouble page_size;
 
    page_size = fabs( scroll_end - scroll_start );
-   gtk_adjustment_set_page_size (ud->xadj, page_size);
+   gtk_adjustment_set_page_size (ud->ag->xadj, page_size);
    msg_dbg("scroll_start %f  scroll_end %f", scroll_start, scroll_end);
 
-   gtk_adjustment_set_page_increment(ud->xadj, page_size / 2);
-   gtk_adjustment_set_step_increment(ud->xadj, page_size / 100);
-   gtk_adjustment_set_value(ud->xadj, scroll_start);
-   gtk_adjustment_set_lower(ud->xadj, 0.0);
-   gtk_adjustment_set_upper(ud->xadj, 1.0);
+   gtk_adjustment_set_page_increment(ud->ag->xadj, page_size / 2);
+   gtk_adjustment_set_step_increment(ud->ag->xadj, page_size / 100);
+   gtk_adjustment_set_value(ud->ag->xadj, scroll_start);
+   gtk_adjustment_set_lower(ud->ag->xadj, 0.0);
+   gtk_adjustment_set_upper(ud->ag->xadj, 1.0);
    
-   gtk_adjustment_value_changed (ud->xadj);
+   gtk_adjustment_value_changed (ud->ag->xadj);
 
    return 0;
 }
@@ -90,7 +90,7 @@ void az_zoom_in_gaction (GSimpleAction *action, GVariant *param, gpointer user_d
    UserData *ud = (UserData *) user_data;
    double start;
    double end;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    
    if ( lbx->logAxis && lbx->logAble ) {
       start = pow( 10, lbx->start_Lval + ( lbx->end_Lval - lbx->start_Lval ) / 4 );
@@ -116,7 +116,7 @@ az_zoom_out_gaction (GSimpleAction *action, GVariant *param, gpointer user_data 
    UserData *ud = (UserData *) user_data;
    double start;
    double end;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    
    if ( lbx->logAxis && lbx->logAble ) {
       start = pow( 10, lbx->start_Lval - ( lbx->end_Lval - lbx->start_Lval ) / 2 );
@@ -142,8 +142,8 @@ az_zoom_cursor0_centered_gaction (GSimpleAction *action, GVariant *param, gpoint
    UserData *ud = (UserData *) user_data;
    double start;
    double end;
-   GawLabels *lbx = ud->xLabels;
-   AWCursor *csp = ud->cursors[0];
+   GawLabels *lbx = ud->ag->xLabels;
+   AWCursor *csp = ud->ag->cursors[0];
    
    msg_dbg("cursors[0] shown %d 0x%x", csp->shown, (unsigned long) csp );
    if ( csp->shown ) {
@@ -174,13 +174,13 @@ void az_zoom_cursors_gaction (GSimpleAction *action, GVariant *param, gpointer u
    double start;
    double end;
    
-   if ( ud->cursors[0]->shown && ud->cursors[1]->shown ) {
-      if( ud->cursors[0]->xval <  ud->cursors[1]->xval) {
-        start = ud->cursors[0]->xval;
-        end = ud->cursors[1]->xval;
+   if ( ud->ag->cursors[0]->shown && ud->ag->cursors[1]->shown ) {
+      if( ud->ag->cursors[0]->xval <  ud->ag->cursors[1]->xval) {
+        start = ud->ag->cursors[0]->xval;
+        end = ud->ag->cursors[1]->xval;
       } else {
-        start = ud->cursors[1]->xval;
-        end = ud->cursors[0]->xval;
+        start = ud->ag->cursors[1]->xval;
+        end = ud->ag->cursors[0]->xval;
       }
       az_cmd_zoom_absolute(ud, start, end );
 //      cu_clear_cursors(ud);
@@ -204,7 +204,7 @@ void az_zoom_x_full_gaction (GSimpleAction *action, GVariant *param, gpointer us
    UserData *ud = (UserData *) user_data;
    double start;
    double end;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    
    start = lbx->min_val;
    end = lbx->max_val;
@@ -238,7 +238,7 @@ void az_pop_zoom_y_full_gaction (GSimpleAction *action, GVariant *param, gpointe
 void az_zoom_y_full_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    UserData *ud = (UserData *) user_data;
-   WavePanel *wp = ud->selected_panel;
+   WavePanel *wp = ud->ag->selected_panel;
 
    if ( ! wp) {
       msg_info (aw_panel_not_selected_msg);
@@ -255,7 +255,7 @@ void az_zoom_x_gaction (GSimpleAction *action, GVariant *param, gpointer user_da
    ud->mouseState = M_SELRANGE_ARMED;
 
    /* set gdk cursor in all panels */
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
                      GINT_TO_POINTER (GDK_RIGHT_SIDE) );
 }
 
@@ -272,7 +272,7 @@ az_zoom_y_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
    ud->srange->type = SR_Y;
    ud->mouseState = M_SELRANGE_ARMED;
    /* set gdk cursor in all panels */
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
                      GINT_TO_POINTER (GDK_TOP_SIDE) );
 }
 
@@ -290,7 +290,7 @@ az_zoom_xy_area_gaction (GSimpleAction *action, GVariant *param, gpointer user_d
    ud->srange->type = SR_XY;
    ud->mouseState = M_SELRANGE_ARMED;
    /* set gdk cursor in all panels */
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
                      GINT_TO_POINTER (GDK_TOP_LEFT_CORNER) );
 }
 
@@ -348,7 +348,7 @@ az_pop_zoom_dialog_gaction (GSimpleAction *action, GVariant *param, gpointer use
    GtkWidget *entry;
    GtkWidget *button;
    gchar *str;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    GawLabels *lby = wp->yLabels;
 
    if (! toggledData) {
@@ -543,11 +543,11 @@ void
 az_zoom_dialog_gaction (GSimpleAction *action, GVariant *param, gpointer user_data )
 {
    UserData *ud = (UserData *) user_data;
-   if ( ud->selected_panel == NULL) {
+   if ( ud->ag->selected_panel == NULL) {
       msg_info (aw_panel_not_selected_msg);
       return ;
    }
-   WavePanel *wp = ud->selected_panel ;
+   WavePanel *wp = ud->ag->selected_panel ;
 
    az_pop_zoom_dialog_gaction ( action, param, wp);
 }

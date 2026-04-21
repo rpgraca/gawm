@@ -23,8 +23,8 @@
 void ap_set_user_panel_size(UserData *ud)
 {
    if (ud->winWidth ){
-      ud->up->panelWidth  = ud->panelWidth;
-      ud->up->panelHeight = ud->panelHeight;
+      ud->up->panelWidth  = ud->ag->panelWidth;
+      ud->up->panelHeight = ud->ag->panelHeight;
       msg_dbg( "w %d, h %d", ud->up->panelWidth, ud->up->panelHeight );
    }
 }
@@ -34,18 +34,18 @@ WavePanel *ap_panel_add_line(UserData *ud, WavePanel *owp, int relpos)
    int pos = pa_panel_find_pos(owp);
    
    if ( pos < 0 ) {
-      pos = g_list_length( ud->panelList);
+      pos = g_list_length( ud->ag->panelList);
    }
    pos += relpos;
    
 //   ap_set_user_panel_size(ud);
    WavePanel *wp = pa_panel_new ( ud );
-   ud->panelList = g_list_insert( ud->panelList, wp, pos );
+   ud->ag->panelList = g_list_insert( ud->ag->panelList, wp, pos );
    /*  update a container to store the WavePanels */
    ap_panel_update_table(ud);
    
    aw_panel_scrolled_set_size_request(ud);
-   return (WavePanel *) g_list_nth_data (ud->panelList, pos);
+   return (WavePanel *) g_list_nth_data (ud->ag->panelList, pos);
 }
 
 /*
@@ -57,19 +57,19 @@ void ap_panel_remove_line( UserData *ud, WavePanel *wp)
 {
    if ( ! wp ){
       if ( (wp = pa_panel_find_selected(ud)) == NULL){
-	 wp = (WavePanel *) g_list_nth_data (ud->panelList, g_list_length( ud->panelList) - 1);
+	 wp = (WavePanel *) g_list_nth_data (ud->ag->panelList, g_list_length( ud->ag->panelList) - 1);
       }
    }
 
-   if ( g_list_length(ud->panelList) == 1 ) {
+   if ( g_list_length(ud->ag->panelList) == 1 ) {
       msg_warning(_("I don't want to remove the last panel!"));
       return;
    }
-   if ( ud->selected_panel == wp ){
-      ud->selected_panel = NULL;
+   if ( ud->ag->selected_panel == wp ){
+      ud->ag->selected_panel = NULL;
    }
 //   ap_set_user_panel_size(ud);
-   ud->panelList = g_list_remove ( ud->panelList, wp );
+   ud->ag->panelList = g_list_remove ( ud->ag->panelList, wp );
    pa_panel_destroy(wp);
    ap_panel_update_table(ud);
    
@@ -82,19 +82,19 @@ void ap_panel_update_table(UserData *ud )
 {
    int newrow;
    int n;
-   GtkWidget *table = ud->panelTable;
+   GtkWidget *table = ud->ag->panelTable;
 
    if ( ! table ) {
       return;
    }
    ap_container_empty( table, 0);
-   n =  g_list_length( ud->panelList);
+   n =  g_list_length( ud->ag->panelList);
 //   gtk_table_resize ( GTK_TABLE(table), n, AW_PANELTABLE_COLS);
 
    msg_dbg( "panelTable rows %d", n );
    
    newrow = 0;
-   GList *list = ud->panelList;
+   GList *list = ud->ag->panelList;
    while (list) {
       GList *next = list->next;
 
@@ -114,15 +114,15 @@ void ap_panel_update_table(UserData *ud )
 
 void ap_set_xvals(UserData *ud)
 {
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    int start_idx = 0;
    int end_idx = 0;
    
 
    lbx->npoints = 0;
-   if ( ud->curwds ) {
-      start_idx = dataset_find_row_index(ud->curwds, lbx->start_val );
-      end_idx   = dataset_find_row_index(ud->curwds, lbx->end_val );
+   if ( ud->ag->curwds ) {
+      start_idx = dataset_find_row_index(ud->ag->curwds, lbx->start_val );
+      end_idx   = dataset_find_row_index(ud->ag->curwds, lbx->end_val );
       lbx->npoints = (end_idx - start_idx) / lbx->w;
    }
    
@@ -191,11 +191,11 @@ void ap_xmeasure_button_show(UserData *ud)
    
    /* show the 3 X buttons  */
    for ( i = 0 ; i < AW_NX_MBTN ; i++ ) {
-      ap_widget_show( ud->cursors[i]->button, ud->cursors[i]->shown);
-      shown |= ud->cursors[i]->shown;
+      ap_widget_show( ud->ag->cursors[i]->button, ud->ag->cursors[i]->shown);
+      shown |= ud->ag->cursors[i]->shown;
    }
-   if ( ud->meas_hbox_shown !=  shown ){
-      ud->meas_hbox_shown = shown;
+   if ( ud->ag->meas_hbox_shown !=  shown ){
+      ud->ag->meas_hbox_shown = shown;
       aw_window_size(ud);
    }
 }
@@ -210,19 +210,19 @@ void ap_xmeasure_button_draw(UserData *ud)
    for ( i = 0 ; i < AW_NX_MBTN ; i++ ) {
 
       if ( up->xconvert == 1 ){ /*convert time_t to string */
-         time_t mytime = (time_t) ud->cursors[i]->xval;
+         time_t mytime = (time_t) ud->ag->cursors[i]->xval;
          char *tips = app_strdup_printf( "%ld", mytime );
          if ( i == 2 ){ /* diff value */
             convert_difftime_str( mytime, up->diffdate_fmt, buf, sizeof(buf) );
          } else {
             convert_time_t_to_date( mytime, up->date_fmt, buf, sizeof(buf) );
          }
-         gtk_label_set_text(GTK_LABEL(ud->cursors[i]->label), buf );
-         gtk_widget_set_tooltip_text (GTK_WIDGET(ud->cursors[i]->button), tips );
+         gtk_label_set_text(GTK_LABEL(ud->ag->cursors[i]->label), buf );
+         gtk_widget_set_tooltip_text (GTK_WIDGET(ud->ag->cursors[i]->button), tips );
          app_free( tips );
       } else {
-         gtk_label_set_text(GTK_LABEL(ud->cursors[i]->label),
-		    val2str(ud->cursors[i]->xval, up->scientific) );
+         gtk_label_set_text(GTK_LABEL(ud->ag->cursors[i]->label),
+		    val2str(ud->ag->cursors[i]->xval, up->scientific) );
       }
    }
 }
@@ -281,16 +281,16 @@ void ap_create_xmeasure_unit(UserData *ud)
    int i;
    
    /* hbox for 3 cursor labels */
-   hbox = ud->meas_hbox;
+   hbox = ud->ag->meas_hbox;
    gtk_widget_show(hbox);
    
-   if ( ! ud->cursors ) {
-      ud->cursors = g_new0(AWCursor *, AW_NX_MBTN);
+   if ( ! ud->ag->cursors ) {
+      ud->ag->cursors = g_new0(AWCursor *, AW_NX_MBTN);
    }
 
    /* create the 3 X buttons  */
    for ( i = AW_NX_MBTN - 1 ; i >= 0 ; i-- ) {
-      ud->cursors[i] = g_new0(AWCursor, 1);
+      ud->ag->cursors[i] = g_new0(AWCursor, 1);
       if ( i == 2 ) {
 	   /* diff button */
 	 sprintf(text, "cursorD");
@@ -298,16 +298,16 @@ void ap_create_xmeasure_unit(UserData *ud)
       } else {
 	 sprintf(text, "cursor%d", i);
 	 sprintf(tips, _("measure: cursor%d"), i);
-	 ud->cursors[i]->x = (i + 1) * ud->up->panelWidth / 3;
+	 ud->ag->cursors[i]->x = (i + 1) * ud->up->panelWidth / 3;
       }
       button = ap_create_measure_button(hbox, "measurebutton", tips );
       label = ap_create_measure_label(button, "0.0", text );
       g_signal_connect (button, "clicked",
                         G_CALLBACK (ap_measure_button_clicked_cb), label );
-      ud->cursors[i]->button = button;
+      ud->ag->cursors[i]->button = button;
       ap_widget_show(button,  0);
 
-      ud->cursors[i]->label = label;
+      ud->ag->cursors[i]->label = label;
    }
 }
 
@@ -317,11 +317,11 @@ void ap_create_xmeasure_unit(UserData *ud)
 void
 ap_xlabel_box_show(UserData *ud)
 {
-  int changed = gtk_widget_get_visible(ud->xlabel_box) ^ ud->up->showXLabels;
-   ap_widget_show(ud->xlabel_box, ud->up->showXLabels);
-   ap_widget_show(ud->logx_box, ud->up->showXLabels);
+  int changed = gtk_widget_get_visible(ud->ag->xlabel_box) ^ ud->up->showXLabels;
+   ap_widget_show(ud->ag->xlabel_box, ud->up->showXLabels);
+   ap_widget_show(ud->ag->logx_box, ud->up->showXLabels);
    if ( ud->up->showXLabels ) {
-      ap_widget_show(ud->win_xlabel_log, al_label_do_logAxis(ud->xLabels) );
+      ap_widget_show(ud->ag->win_xlabel_log, al_label_do_logAxis(ud->ag->xLabels) );
    }
    if ( changed ) {
       aw_window_size(ud);
@@ -338,10 +338,10 @@ void ap_xlabel_box_create(UserData *ud)
    GtkWidget *event_box;
    GtkWidget *layout;
    GtkWidget *da;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
 
    /* event box */
-   event_box = ud->xlabel_ev_box;
+   event_box = ud->ag->xlabel_ev_box;
    g_object_ref (event_box); /* increment ref to avoid destruction */
    gtk_widget_show(event_box);
    ad_set_drag_dest(event_box, ud, NULL, DND_EVENT_BOX );
@@ -349,21 +349,21 @@ void ap_xlabel_box_create(UserData *ud)
    /* all line hbox */
    hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
    gtk_container_set_border_width (GTK_CONTAINER (hbox), 2);
-   ud->allline_box = hbox ;
+   ud->ag->allline_box = hbox ;
    gtk_widget_show (hbox);
    gtk_container_add (GTK_CONTAINER (event_box), hbox);
  
    /* xlabels box */
    hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 0);
    gtk_widget_show (hbox);
-   ud->xlabel_box = hbox ;
+   ud->ag->xlabel_box = hbox ;
    g_object_ref (hbox); /* increment ref to avoid destruction */
-   gtk_box_pack_end (GTK_BOX (ud->allline_box), hbox, FALSE, TRUE, 0);
+   gtk_box_pack_end (GTK_BOX (ud->ag->allline_box), hbox, FALSE, TRUE, 0);
  
    /* create layout for xlabels */
    layout =  gtk_layout_new (NULL, NULL);
    lbx->label_layout = layout;
-   gtk_box_pack_start (GTK_BOX (ud->xlabel_box), layout, TRUE, TRUE, 0);
+   gtk_box_pack_start (GTK_BOX (ud->ag->xlabel_box), layout, TRUE, TRUE, 0);
    gtk_widget_show (layout);
 
    /* create 2 xlabels */
@@ -372,8 +372,8 @@ void ap_xlabel_box_create(UserData *ud)
 
    /* logx box */
    hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-   gtk_box_pack_start (GTK_BOX (ud->allline_box), hbox, TRUE, TRUE, 0);
-   ud->logx_box = hbox ;
+   gtk_box_pack_start (GTK_BOX (ud->ag->allline_box), hbox, TRUE, TRUE, 0);
+   ud->ag->logx_box = hbox ;
    g_object_ref (hbox); /* increment ref to avoid destruction */
 
    /* drawing area for drawing sizing */
@@ -383,7 +383,7 @@ void ap_xlabel_box_create(UserData *ud)
    /* logx label */
    label = gtk_label_new("LogX");
    gtk_box_pack_end(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-   ud->win_xlabel_log = label;
+   ud->ag->win_xlabel_log = label;
  
    ap_xlabel_box_show(ud);
 }
@@ -397,8 +397,9 @@ ap_x_scroll_handler_cb(GtkWidget *widget, gpointer data )
 {
    GtkAdjustment *adj = GTK_ADJUSTMENT(widget);
    WavePanel *wp;
-   UserData *ud = (UserData *) data;
-   GawLabels *lbx = ud->xLabels;
+   PanelGroup *pg = (PanelGroup *) data;
+   UserData *ud = pg->ud;
+   GawLabels *lbx = pg->xLabels;
    double start;
    double end ;
 
@@ -415,32 +416,32 @@ ap_x_scroll_handler_cb(GtkWidget *widget, gpointer data )
     		  	  0.0;
    } else {
       start = lbx->min_val + value * ( lbx->max_val - lbx->min_val );
-      end =  lbx->min_val + 
+      end =  lbx->min_val +
 	 (value + page_size ) * ( lbx->max_val - lbx->min_val ) ;
    }
 
    msg_dbg("start %f, end %f", start, end);
    al_label_update_vals(lbx, start, end );
    ap_set_xvals(ud);
-   
-   GList *list = ud->panelList;
+
+   GList *list = pg->panelList;
    while (list) {
       GList *next = list->next;
 
-      wp = (WavePanel *) list->data;       
+      wp = (WavePanel *) list->data;
       AWCursor *csp;
 
-      csp = ud->cursors[0];
+      csp = pg->cursors[0];
       if ( csp->shown ) {
 	 csp->zoom = 1;
 	 cu_update_xcursor(wp, csp, csp->x, 0);
       }
-      csp = ud->cursors[1];
+      csp = pg->cursors[1];
       if ( csp->shown ) {
 	 csp->zoom = 1;
 	 cu_update_xcursor(wp, csp, csp->x, 0);
       }
-      
+
       if ( ud->suppress_redraw == 0) {
 	 da_drawing_redraw(wp->drawing);
       }
@@ -466,14 +467,14 @@ void ap_create_win_bottom(UserData *ud)
 			 1.0/2.,      /* page increment = 50% */
 			 1.0          /* page_size */
 			 );
-   ud->xadj = adj;
+   ud->ag->xadj = adj;
    scrollbar = gtk_scrollbar_new(GTK_ORIENTATION_HORIZONTAL,
                                   GTK_ADJUSTMENT(adj));
 
-   g_signal_connect( adj, "value_changed", 
-		     G_CALLBACK (ap_x_scroll_handler_cb), (gpointer) ud );
+   g_signal_connect( adj, "value_changed",
+		     G_CALLBACK (ap_x_scroll_handler_cb), (gpointer) ud->ag );
    gtk_widget_show(scrollbar);
-   ud->xscrollbar = scrollbar;
+   ud->ag->xscrollbar = scrollbar;
    g_object_ref (scrollbar); /* increment ref to avoid destruction */
 }
 
@@ -484,10 +485,10 @@ ap_mbtn_update(MeasureBtn *mbtn, UserData *ud )
    double mvalue;
    gint show;
    
-   if ( mbtn->csp == ud->cursors[2] ) {
+   if ( mbtn->csp == ud->ag->cursors[2] ) {
       /* Y diff button */
-      double y0 = wavevar_interp_value(mbtn->var, ud->cursors[0]->xval);
-      double y1 = wavevar_interp_value(mbtn->var, ud->cursors[1]->xval);
+      double y0 = wavevar_interp_value(mbtn->var, ud->ag->cursors[0]->xval);
+      double y1 = wavevar_interp_value(mbtn->var, ud->ag->cursors[1]->xval);
       mvalue = y1 - y0;
       show = mbtn->csp->shown & ud->up->showYDiff;
    } else {
@@ -506,25 +507,25 @@ void
 ap_mbtn_update_all(UserData *ud)
 {
    msg_dbg("called");
-   g_list_foreach(ud->all_measure_buttons, (GFunc) ap_mbtn_update, (gpointer) ud);
+   g_list_foreach(ud->ag->all_measure_buttons, (GFunc) ap_mbtn_update, (gpointer) ud);
 }
 
 
 
 void ap_all_panel_redraw(UserData *ud)
 {
-   g_list_foreach (ud->panelList,(GFunc) pa_panel_full_redraw, NULL);
+   g_list_foreach (ud->ag->panelList,(GFunc) pa_panel_full_redraw, NULL);
 }
 
 void ap_redraw_x(UserData *ud)
 {
    ap_xlabel_box_show(ud);
-   al_label_draw(ud->xLabels);
+   al_label_draw(ud->ag->xLabels);
 }
 
 void ap_all_redraw(UserData *ud)
 {
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    
    if ( lbx ) { /* force recompute */
       al_label_update_min_max_vals(lbx, 0.0, 0.0 );
@@ -552,11 +553,11 @@ void ap_panel_add_var(WavePanel *wp, WaveVar *var, VisibleWave *ovw, GdkRGBA *us
    GdkRGBA *color = NULL;
    
    if (wp == NULL) {
-      if ( ud->selected_panel  == NULL) {
+      if ( ud->ag->selected_panel  == NULL) {
 	 msg_info (aw_panel_not_selected_msg);
 	 return ;
       }
-      wp = ud->selected_panel;
+      wp = ud->ag->selected_panel;
    }
 
    if ( ovw ) {
@@ -570,7 +571,7 @@ void ap_panel_add_var(WavePanel *wp, WaveVar *var, VisibleWave *ovw, GdkRGBA *us
    vw = wave_new( var, wdata );
    
    if ( (vw->logAble == 0 && al_label_get_logAxis(wp->yLabels)) ||
-	(wavevar_ivar_get_max(vw->var) <= 0 && al_label_get_logAxis(ud->xLabels)) ){
+	(wavevar_ivar_get_max(vw->var) <= 0 && al_label_get_logAxis(wp->pg->xLabels)) ){
       gint response;
       char *message =
 	 _("You are going to display a non Logarithm waveform\n"
@@ -727,7 +728,7 @@ ap_remove_all_wave_if_test(UserData *ud, TestParams *params,
    VisibleWave *vw;
    int removed = 0;
 
-   GList *plist = ud->panelList;
+   GList *plist = ud->ag->panelList;
    while (plist) {
       GList *pnext = plist->next;
 
@@ -900,7 +901,7 @@ ap_wavetable_new_from_displayed(UserData *ud )
    int first = 1;
    GList *panelList;
 
-   panelList = ud->panelList;
+   panelList = ud->ag->panelList;
    while (panelList) {
       GList *pnext = panelList->next;
 
@@ -936,7 +937,7 @@ ap_wavetable_new_from_displayed(UserData *ud )
       double val = dataset_val_get( swds, row, ivar->colno );
       dataset_val_add ( wds, val);
 
-      panelList = ud->panelList;
+      panelList = ud->ag->panelList;
       while (panelList) {
 	 GList *pnext = panelList->next;
 

@@ -128,7 +128,7 @@ da_callback_srange(UserData *ud, WavePanel *wp )
    SelRange *sr = ud->srange;
    double xstart, ystart;
    double xend, yend;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    GawLabels *lby = sr->wp->yLabels;
    
    msg_dbg( "type=%d x1=%d x2=%d  y1=%d y2=%d",
@@ -243,7 +243,7 @@ da_drawing_draw_grid (WavePanel *wp)
    int h = walloc.height;
 
    ArrayStruct *ary = array_struct_new( sizeof(GawSegment), 128, NULL);
-   GawLabels *lbx = wp->ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    GawLabels *lby = wp->yLabels;
 
    /* calculate grid segments */
@@ -291,16 +291,16 @@ da_drawing_post_configure (GtkWidget *widget, WavePanel *wp, int w, int h )
       pa_panel_draw_ylabels( wp );
    }
    
-   GawLabels *lbx = wp->ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    if ( lbx->changed & (CV_CHANGED | CV_SBCHANGED) ){
       int vis = lbx->changed & CV_SBSHOW ;
       int xlwidth = w;
       
       if ( vis ) {
-         xlwidth += ud->sbSize;
+         xlwidth += wp->pg->sbSize;
       }
       if ( xlwidth != lbx->wh ){ 
-         gtk_widget_set_size_request (GTK_WIDGET(ud->xlabel_box),
+         gtk_widget_set_size_request (GTK_WIDGET(wp->pg->xlabel_box),
                                       xlwidth, lbx->lbheight);
          lbx->wh = xlwidth; /* x label box width */
          lbx->changed |= CV_CHANGED ;
@@ -319,18 +319,18 @@ da_drawing_post_configure (GtkWidget *widget, WavePanel *wp, int w, int h )
       al_label_draw( lbx );
    }
 
-   ud->panelHeight = h;
-   ud->panelWidth = w;
-//   msg_dbg("HQ1 w %d, h %d", ud->panelWidth, ud->panelHeight);
+   wp->pg->panelHeight = h;
+   wp->pg->panelWidth = w;
+//   msg_dbg("HQ1 w %d, h %d", wp->pg->panelWidth, wp->pg->panelHeight);
    GtkWidget *scr = gtk_scrolled_window_get_vscrollbar(
-                            GTK_SCROLLED_WINDOW(ud->panel_scrolled)) ;
+                            GTK_SCROLLED_WINDOW(wp->pg->panel_scrolled)) ;
    if ( gtk_widget_get_visible (scr) == FALSE ) {
-	 ud->panelWidth = w - ud->sbSize ;
+	 wp->pg->panelWidth = w - wp->pg->sbSize ;
    }
-   if ( ud->panelWidth % 2 ) {
-      ud->panelWidth += 1;
+   if ( wp->pg->panelWidth % 2 ) {
+      wp->pg->panelWidth += 1;
    }
-//  msg_dbg("HQ2 w %d, h %d, sb %d", ud->panelWidth, ud->panelHeight, ud->sbSize);
+//  msg_dbg("HQ2 w %d, h %d, sb %d", wp->pg->panelWidth, wp->pg->panelHeight, wp->pg->sbSize);
 }
 
 void
@@ -383,7 +383,7 @@ da_drawing_draw_all (GtkWidget *widget, cairo_t *cr, WavePanel *wp,
 
    /* draw the 2 cursors in the panel */
    for (i = 0 ; i < 2 ; i++) {
-      AWCursor *csp = ud->cursors[i];
+      AWCursor *csp = wp->pg->cursors[i];
       if (csp->shown) {
          gdk_cairo_set_source_rgba (cr, csp->color);
          cairo_set_line_width (cr, 1.0);
@@ -441,7 +441,7 @@ static VisibleWave *
 da_find_closest_wave(WavePanel *wp, int px, int py)
 {
    UserData *ud = wp->ud;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    GawLabels *lby = wp->yLabels;
    int h = gtk_widget_get_allocated_height(wp->drawing);
    double min_dist = 1e30;
@@ -506,7 +506,7 @@ da_find_nearest_cursor(UserData *ud, int px)
    int best_dist = threshold + 1;
 
    for (i = 0; i < 2; i++) {
-      AWCursor *csp = ud->cursors[i];
+      AWCursor *csp = ud->ag->cursors[i];
       if (csp->shown) {
          int dist = abs(px - csp->x);
          if (dist < best_dist) {
@@ -544,7 +544,7 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
    pango_layout_set_font_description(layout, font_desc);
 
    for (i = 0; i < 2; i++) {
-      AWCursor *csp = ud->cursors[i];
+      AWCursor *csp = wp->pg->cursors[i];
       if (!csp->shown) {
          continue;
       }
@@ -615,8 +615,8 @@ da_draw_cursor_annotations(WavePanel *wp, cairo_t *cr, int w, int h)
    }
 
    /* Draw delta between cursors if both shown */
-   AWCursor *c0 = ud->cursors[0];
-   AWCursor *c1 = ud->cursors[1];
+   AWCursor *c0 = wp->pg->cursors[0];
+   AWCursor *c1 = wp->pg->cursors[1];
    if (c0->shown && c1->shown) {
       /* 1. X Delta */
       double dx = c1->xval - c0->xval;
@@ -733,7 +733,7 @@ da_pan_y(WavePanel *wp, double fraction)
 static void
 da_pan_x(UserData *ud, double fraction)
 {
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    double range = lbx->end_val - lbx->start_val;
    double shift = range * fraction;
    double new_start = lbx->start_val + shift;
@@ -757,7 +757,12 @@ da_drawing_scroll_cb(GtkWidget *widget, GdkEventScroll *event, gpointer data)
 {
    WavePanel *wp = (WavePanel *) data;
    UserData *ud = wp->ud;
-   GawLabels *lbx = ud->xLabels;
+
+   /* Ensure active group matches this panel's group */
+   if (wp->pg != ud->ag) {
+      aw_set_active_group(ud, wp->pg);
+   }
+   GawLabels *lbx = wp->pg->xLabels;
    double start = lbx->start_val;
    double end = lbx->end_val;
    double range = end - start;
@@ -800,7 +805,8 @@ da_drawing_scroll_cb(GtkWidget *widget, GdkEventScroll *event, gpointer data)
       double new_yend = yval + (1.0 - yfrac) * new_yrange;
       pa_panel_set_yvals(wp, new_ystart, new_yend);
       wp->man_yzoom = 1;
-      ap_all_redraw(ud);
+      da_drawing_redraw(wp->drawing);
+      pa_panel_draw_ylabels(wp);
       return TRUE;
    }
 
@@ -843,7 +849,12 @@ da_drawing_button_press_cb (GtkWidget *widget, GdkEventButton *event,
    WavePanel *wp =  (WavePanel *) data;
    UserData  *ud =   wp->ud;
    GawText *gtext;
-   
+
+   /* Ensure active group matches this panel's group */
+   if (wp->pg != ud->ag) {
+      aw_set_active_group(ud, wp->pg);
+   }
+
    msg_dbg( "button %d state %d mouseState %d",
 	   event->button, event->state, ud->mouseState  );
 
@@ -962,8 +973,8 @@ da_drawing_button_press_cb (GtkWidget *widget, GdkEventButton *event,
                da_dragged_cursor = near_cursor;
                ud->drag_button = near_cursor + 1; /* cursor 0→button 1, cursor 1→button 2 */
             } else {
-               da_dragged_cursor = ud->last_dragged_cursor;
-               ud->drag_button = ud->last_dragged_cursor + 1;
+               da_dragged_cursor = wp->pg->last_dragged_cursor;
+               ud->drag_button = wp->pg->last_dragged_cursor + 1;
             }
             ud->mouseState = M_CURSOR_DRAG;
             da_set_gdk_cursor(widget, GDK_SB_H_DOUBLE_ARROW);
@@ -1049,7 +1060,7 @@ da_drawing_button_release_cb (GtkWidget *widget, GdkEventButton *event,
 
     case M_SELRANGE_ACTIVE:
       gtk_grab_remove(widget);
-      g_list_foreach(ud->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
+      g_list_foreach(wp->pg->panelList, (GFunc) pa_panel_drawing_set_gdk_cursor,
 		     GINT_TO_POINTER (-1) ); /* clear gdk cursor */
       da_update_srange(ud->srange, (GdkEventMotion *) event, 0);
       da_callback_srange(ud, wp);
@@ -1090,7 +1101,7 @@ da_drawing_motion_cb (GtkWidget *widget, GdkEventMotion *event, gpointer data )
    GtkAllocation walloc;
    gtk_widget_get_allocation (widget, &walloc);
    if (ud->up->xconvert == 1 ) {
-      time_t mytime = (time_t) al_label_x2val(ud->xLabels,  x );
+      time_t mytime = (time_t) al_label_x2val(wp->pg->xLabels,  x );
       convert_time_t_to_date( mytime, ud->up->date_fmt, text, sizeof(text) );
    } else {
       sprintf (text, gettext(da_statusFormat), walloc.width,
@@ -1125,7 +1136,7 @@ da_drawing_motion_cb (GtkWidget *widget, GdkEventMotion *event, gpointer data )
 
     case M_PAN_DRAG:
       {
-         GawLabels *lbx = ud->xLabels;
+         GawLabels *lbx = wp->pg->xLabels;
          int dx = x - ud->srange->x1;
          double start = lbx->start_val;
          double end = lbx->end_val;

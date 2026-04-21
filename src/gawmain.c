@@ -182,7 +182,7 @@ void aw_algo_exec ( AwSubmenuAction *sa )
 {
    UserData *ud  = sa->ud;
    
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_set_drawing_func, NULL);
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_set_drawing_func, NULL);
    ap_all_redraw(ud);
 }
 
@@ -342,7 +342,7 @@ void aw_window_size(UserData *ud )
    GtkRequisition req;
    GtkRequisition nreq;
 
-   if ( ! ud->panel_scrolled) {
+   if ( ! ud->ag->panel_scrolled) {
       return ;     /* not yet  ready to go */
    }
    width = 2 * gtk_container_get_border_width( GTK_CONTAINER(ud->globalTable));
@@ -360,15 +360,15 @@ void aw_window_size(UserData *ud )
 #if  DEBUG_SIZE
    msg_dbg( "w %d, h %d", width, height );
 #endif
-   if ( ! ud->sbSize && gtk_widget_get_visible (GTK_WIDGET(ud->panel_scrolled)) ) {
+   if ( ! ud->ag->sbSize && gtk_widget_get_visible (GTK_WIDGET(ud->ag->panel_scrolled)) ) {
      /*  sbSize = w(panel_scrolled) - w(panelTable) */
-      gtk_widget_get_preferred_size ( GTK_WIDGET(ud->panel_scrolled), &req, &nreq);
-//      ud->sbSize = req.width;
-      gtk_widget_get_preferred_size( GTK_WIDGET(ud->panelTable), &req, &nreq);
-//      ud->sbSize -= req.width;
+      gtk_widget_get_preferred_size ( GTK_WIDGET(ud->ag->panel_scrolled), &req, &nreq);
+//      ud->ag->sbSize = req.width;
+      gtk_widget_get_preferred_size( GTK_WIDGET(ud->ag->panelTable), &req, &nreq);
+//      ud->ag->sbSize -= req.width;
    }
    /* request 1 pixel more */
-   width += ud->sbSize ;
+   width += ud->ag->sbSize ;
 #if  DEBUG_SIZE
    msg_dbg( "w %d, h %d", width, height );
 #endif
@@ -388,25 +388,25 @@ void aw_window_size(UserData *ud )
 #if  DEBUG_SIZE
    msg_dbg( "w %d, h %d", width, height );
 #endif   
-   if ( ud->meas_hbox_shown ) {
-      gtk_widget_get_preferred_size( GTK_WIDGET(ud->meas_hbox), &req, &nreq);
+   if ( ud->ag->meas_hbox_shown ) {
+      gtk_widget_get_preferred_size( GTK_WIDGET(ud->ag->meas_hbox), &req, &nreq);
       height += req.height;
       msg_dbg( "w %d, h %d", width, height );
    }
    if ( ud->up->showXLabels ) { 
-      gtk_widget_get_preferred_size( GTK_WIDGET(ud->xlabel_ev_box), &req, &nreq);
+      gtk_widget_get_preferred_size( GTK_WIDGET(ud->ag->xlabel_ev_box), &req, &nreq);
       height += req.height;
 #if  DEBUG_SIZE
      msg_dbg( "w %d, h %d", width, height );
 #endif
    }
-   gtk_widget_get_preferred_size( GTK_WIDGET(ud->xscrollbar), &req, &nreq);
+   gtk_widget_get_preferred_size( GTK_WIDGET(ud->ag->xscrollbar), &req, &nreq);
    height += req.height;
    msg_dbg( "w %d, h %d", width, height );
 
    
    /* add the height of scrolled window */
-   height += ud->panelScrolledHeight;     /* height = 112 + panelScrolledHeight */
+   height += ud->ag->panelScrolledHeight;     /* height = 112 + panelScrolledHeight */
 //   msg_dbg( "w %d, h %d", width, height );
 
    ud->reqWinWidth = width;
@@ -418,31 +418,31 @@ void aw_window_size(UserData *ud )
    if ( ud->up->allowResize == 0 || ud->winWidth == 0 ) {
       gtk_window_resize (GTK_WINDOW (ud->window), ud->reqWinWidth, ud->reqWinHeight);
    }
-   msg_dbg( "w %d, h %d panelH %d", ud->reqWinWidth, ud->reqWinHeight, ud->panelScrolledHeight );
+   msg_dbg( "w %d, h %d panelH %d", ud->reqWinWidth, ud->reqWinHeight, ud->ag->panelScrolledHeight );
 }
 
 void aw_panel_scrolled_set_size_request( UserData *ud )
 {
    int height;
-   int np = g_list_length( ud->panelList);
+   int np = g_list_length( ud->ag->panelList);
    int h;
 
    /* 1 + panelHeight + 1 */
    height = np * (ud->up->panelHeight + 2);
 
    /* if not configured or enough room for panel */
-   if ( ud->maxHeight == 0 || height < ud->maxHeight ){
+   if ( ud->ag->maxHeight == 0 || height < ud->ag->maxHeight ){
        h = height ;
    } else {
-      h = (ud->maxHeight / (ud->up->panelHeight + 2)) *
+      h = (ud->ag->maxHeight / (ud->up->panelHeight + 2)) *
 	 (ud->up->panelHeight + 2);
    }
 
    h += 4;
-   ud->panelScrolledHeight = h ;
+   ud->ag->panelScrolledHeight = h ;
 
    gtk_scrolled_window_set_min_content_height(
-                      GTK_SCROLLED_WINDOW (ud->panel_scrolled), h );     
+                      GTK_SCROLLED_WINDOW (ud->ag->panel_scrolled), h );     
 
    msg_dbg( "npanel %d, hscrolled %d htable %d", np, h, height );
    aw_window_size(ud);
@@ -465,19 +465,19 @@ aw_window_configure_cb( GtkWidget *widget, GdkEventConfigure *event,
 	    event->width,  event->height,
 	    (long unsigned int) widget );
 
-   GdkWindow *window = gtk_widget_get_window (ud->panel_scrolled);
+   GdkWindow *window = gtk_widget_get_window (ud->ag->panel_scrolled);
    gdk_window_get_root_coords(window, 0, 0,  &root_x, &root_y);
    GtkAllocation alloc;
-   gtk_widget_get_allocation (ud->panel_scrolled, &alloc);
+   gtk_widget_get_allocation (ud->ag->panel_scrolled, &alloc);
 
    root_x += alloc.x;
    root_y += alloc.y;
 
-   if ( ud->maxHeight <= 0 ){
+   if ( ud->ag->maxHeight <= 0 ){
       if ( ud->up->max_ps_y ){
-         ud->maxHeight = ud->up->max_ps_y - root_y;
+         ud->ag->maxHeight = ud->up->max_ps_y - root_y;
       } else {
-         ud->maxHeight = ud->waHeight - root_y;
+         ud->ag->maxHeight = ud->waHeight - root_y;
          ud->up->max_ps_y = ud->waHeight;
       }
    }
@@ -508,7 +508,7 @@ aw_window_draw_cb( GtkWidget *widget, cairo_t *cr, gpointer data )
    ud->winWidth = w;
    if ( width == 0 ) {
       /* first expose -  compensation - to be explained */ 
-      ud->panelScrolledHeight += 2;
+      ud->ag->panelScrolledHeight += 2;
       aw_window_size(ud);
    }
    return FALSE; /* FALSE to propagate the event further. */
@@ -517,7 +517,7 @@ aw_window_draw_cb( GtkWidget *widget, cairo_t *cr, gpointer data )
 void aw_scrollbar_show_cb( GtkWidget *widget, gpointer pdata)
 {
    UserData *ud = (UserData *) pdata;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    if ( ! lbx ) {
       return;
    }
@@ -529,7 +529,7 @@ void aw_scrollbar_show_cb( GtkWidget *widget, gpointer pdata)
 void aw_scrollbar_hide_cb( GtkWidget *widget, gpointer pdata)
 {
    UserData *ud = (UserData *) pdata;
-   GawLabels *lbx = ud->xLabels;
+   GawLabels *lbx = ud->ag->xLabels;
    if ( ! lbx ) {
       return;
    }
@@ -542,12 +542,16 @@ void aw_scrollbar_hide_cb( GtkWidget *widget, gpointer pdata)
 void aw_create_main_window ( UserData *ud )
 {
    GtkWidget *window;
-   GtkAdjustment *adj;
    GdkGeometry geometry;
    int i;
 
-   /* create a global GawLabels object for X labels */
-   ud->xLabels = al_label_new(ud->up, ud->up->setLogX, 1);
+   /* Create the initial tab and panel group */
+   GawTab *tab = aw_tab_new(ud, _("Tab 1"));
+   ud->tabList = g_list_append(ud->tabList, tab);
+   ud->active_tab = tab;
+   PanelGroup *pg = aw_tab_add_group(tab, _("Default"));
+   ud->ag = pg;
+
    /* create a global SelRange object */
    ud->srange = g_new0(SelRange, 1);
 
@@ -562,11 +566,11 @@ void aw_create_main_window ( UserData *ud )
 		     G_CALLBACK (gtk_false), NULL);
    g_signal_connect (window, "configure-event",
 		     G_CALLBACK (aw_window_configure_cb), (gpointer) ud);
-   g_signal_connect (window, "draw", 
+   g_signal_connect (window, "draw",
                      G_CALLBACK (aw_window_draw_cb), (gpointer) ud);
 
-   /* create global Table */
-   gm_create_layout(ud);  /*  create menu, toolbar, statusBar */
+   /* create global Table (menu, toolbar, statusBar, hpaned) */
+   gm_create_layout(ud);
    gtk_grid_set_column_homogeneous(GTK_GRID(ud->globalTable), TRUE);
    gtk_widget_show(ud->globalTable);
    gtk_container_set_border_width (GTK_CONTAINER (ud->globalTable), WIN_BORDER_SIZE);
@@ -577,54 +581,35 @@ void aw_create_main_window ( UserData *ud )
    gtk_widget_show (ud->siglist_box);
    gtk_container_add (GTK_CONTAINER (ud->siglist_scrolled), ud->siglist_box);
 
-   /* create the 3 X measure buttons */
-   ap_create_xmeasure_unit(ud);
+   /* create GtkNotebook and add as right pane of hpaned */
+   ud->notebook = gtk_notebook_new();
+   gtk_notebook_set_scrollable(GTK_NOTEBOOK(ud->notebook), TRUE);
+   gtk_widget_set_hexpand(ud->notebook, TRUE);
+   gtk_widget_set_vexpand(ud->notebook, TRUE);
+   gtk_widget_show(ud->notebook);
+   gtk_paned_pack2(GTK_PANED(ud->hpaned), ud->notebook, TRUE, FALSE);
 
-   /* horizontal box for X-axis labels */
-   ap_xlabel_box_create(ud);
-   ap_create_win_bottom(ud);
-   
-   /* create panel table */
-   ud->panelTable = gtk_grid_new();
-   gtk_grid_set_row_spacing ( GTK_GRID(ud->panelTable), 1);
-   gtk_grid_set_row_homogeneous(GTK_GRID(ud->panelTable), TRUE);
-   gtk_widget_set_hexpand(ud->panelTable, TRUE );
-   gtk_widget_show(ud->panelTable);
+   g_signal_connect(ud->notebook, "switch-page",
+                    G_CALLBACK(aw_notebook_switch_page_cb), (gpointer) ud);
 
-   /* create a scrolled window to contains panels with vertical scrollbar */
-   gtk_widget_set_size_request (GTK_WIDGET(ud->panel_scrolled), -1, 30);
+   /* Build per-group widgets (meas_hbox, panels, xlabels, scrollbar) */
+   pg_group_build_widgets(pg);
 
-   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW (ud->panel_scrolled),
-                                  GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-   GtkWidget *vscrollbar = gtk_scrolled_window_get_vscrollbar(
-                                  GTK_SCROLLED_WINDOW(ud->panel_scrolled));
+   /* Add group's widget tree to the tab's content box */
+   gtk_box_pack_start(GTK_BOX(tab->tab_content), pg->groupBox, TRUE, TRUE, 0);
 
-   gtk_widget_set_can_focus (vscrollbar, FALSE);
-   gtk_widget_show (ud->panel_scrolled);
-   gtk_container_add(GTK_CONTAINER(ud->panel_scrolled), ud->panelTable);
+   /* Add tab to notebook */
+   gtk_notebook_append_page(GTK_NOTEBOOK(ud->notebook),
+                            tab->tab_content,
+                            gtk_label_new(tab->name));
 
-   adj = gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW (ud->panel_scrolled) );
-   gtk_container_set_focus_vadjustment( GTK_CONTAINER (ud->panelTable), adj );
-   gtk_adjustment_set_page_size (adj, gtk_adjustment_get_upper(adj) ); 
+   /* Hide tab bar when there's only one tab */
+   gtk_notebook_set_show_tabs(GTK_NOTEBOOK(ud->notebook), FALSE);
 
-   /*  set callback for scroll bar */
-   GtkWidget *scr = gtk_scrolled_window_get_vscrollbar(
-			    GTK_SCROLLED_WINDOW(ud->panel_scrolled)) ;
-   g_signal_connect (scr, "show",
-		     G_CALLBACK (aw_scrollbar_show_cb), (gpointer) ud);
-   g_signal_connect (scr, "hide",
-		     G_CALLBACK (aw_scrollbar_hide_cb), (gpointer) ud);
-   
-   /* create 2 panels */
+   /* create initial panels */
    for (i = 0 ; i < ud->reqpanels ; i++) {
       ap_panel_add_line(ud, NULL, 0);
    }
-
-
-   /* create horizontal scrollbar */
-   gtk_grid_attach(GTK_GRID(ud->globalTable), ud->xscrollbar, 
-                /* left,    top,  width,   height    */
-                      1,      5,      1,        1  );   
 
    /* status bar */
    GtkWidget *hbox = gtk_statusbar_get_message_area (GTK_STATUSBAR (ud->statusbar));
@@ -632,14 +617,12 @@ void aw_create_main_window ( UserData *ud )
    ud->statusLabel = label;
    gtk_widget_set_name(label, "statusbar" );
 
-   /* status bar test */
-   gtk_statusbar_push (GTK_STATUSBAR (ud->statusbar), 0, 
+   gtk_statusbar_push (GTK_STATUSBAR (ud->statusbar), 0,
 			  _("Welcome to gawm"));
 
    aw_update_from_prefs(ud);
    if ( ! gtk_widget_get_visible (GTK_WIDGET(window)) ) {
       gtk_widget_show (window);
-//     gtk_widget_show_all (window);
       memset(&geometry, 0, sizeof(geometry));
       geometry.min_width = ud->up->min_win_width;
       geometry.min_height = ud->up->min_win_height;
@@ -748,14 +731,22 @@ void aw_main_window_destroy ( UserData *ud )
 {
    int i;
 
-   if ( ! ud->xLabels ){ /* avoid callback */
+   if ( !ud->ag || ! ud->ag->xLabels ){ /* avoid callback */
       return;
    }
    af_unload_all_files(ud);
-   
-   /* GawLabels object for X labels */
-   al_label_destroy(ud->xLabels);
-   ud->xLabels = NULL;
+
+   /* Destroy all tabs and their groups (panels, cursors, xLabels) */
+   GList *tlist = ud->tabList;
+   while (tlist) {
+      aw_tab_destroy((GawTab *) tlist->data);
+      tlist = tlist->next;
+   }
+   g_list_free(ud->tabList);
+   ud->tabList = NULL;
+   ud->active_tab = NULL;
+   ud->ag = NULL;
+
    /* global SelRange object */
    g_free(ud->bg_color);
    g_free(ud->pg_color);
@@ -766,13 +757,6 @@ void aw_main_window_destroy ( UserData *ud )
    g_free(ud->lbbut_fgcolor);
    g_free(ud->lbbut_bgcolor);
    g_free((char *) ud->panelfont);
-   for ( i = 0 ; i < 2 ; i++) {
-      g_free(ud->cursors[i]->color);
-   }
-   for ( i = 0 ; i < AW_NX_MBTN ; i++) {
-      g_free(ud->cursors[i]);
-   }
-   g_free(ud->cursors);
 
    /* drag and drop dest data */
    i = g_list_length( ud->destdata_list);
@@ -781,12 +765,6 @@ void aw_main_window_destroy ( UserData *ud )
       g_free(p);
    }
 
-   /* destroy panels */
-   i = g_list_length( ud->panelList);
-   for (  ; i > 0 ; i--) {
-      WavePanel *wp = (WavePanel *) g_list_nth_data (ud->panelList, i - 1);
-      pa_panel_destroy(wp);
-   }
    gtk_widget_destroy(ud->hpaned);
 
    /* global Table */

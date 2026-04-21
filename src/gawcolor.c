@@ -112,7 +112,7 @@ void ac_color_rgba_init(GdkRGBA *destColor, GdkRGBA *styleColor, char *rcColor)
 void ac_color_background_set ( UserData  *ud)
 {
    if (ac_color_rgba_str_set( &ud->up->panelBgColor, ud->bg_color ) ){
-      g_list_foreach(ud->panelList, (GFunc) pa_panel_background_set, NULL );
+      g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_background_set, NULL );
    }
 }
 
@@ -120,13 +120,13 @@ void ac_color_grid_set (UserData  *ud)
 {
    ac_color_rgba_str_set( &ud->up->gridColor, ud->pg_color);
    /* init grid for all created drawing */
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_color_grid_set, ud->pg_color );
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_color_grid_set, ud->pg_color );
 }
 
 
 void ac_color_cursor_set ( UserData  *ud, int i )
 {
-   AWCursor *csp = ud->cursors[i];
+   AWCursor *csp = ud->ag->cursors[i];
 
    ac_color_rgba_ary_set( ud->up->cursorsColor, csp->color, i );
 }
@@ -145,7 +145,7 @@ void ac_color_wave_button_bg_set ( UserData  *ud )
 {
    if ( ac_color_rgba_str_set( &ud->up->wavebgColor, ud->wbut_color ) ) {
       /* color changed */
-      g_list_foreach(ud->panelList, (GFunc) pa_panel_background_set, NULL );
+      g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_background_set, NULL );
    }
 }
 
@@ -219,7 +219,7 @@ void ac_color_initialize (WavePanel *wp)
    for (i = 0 ; i < 2 ; i++) {
       char rcname[64];
       char *cursorColor = array_strPtr_get( up->cursorsColor, i);
-      csp = ud->cursors[i];
+      csp = ud->ag->cursors[i];
       sprintf(rcname, "dacursor%d", i);
 
       csp->color = g_new0 (GdkRGBA, 1);
@@ -331,7 +331,7 @@ int ac_color_grid_cmd (UserData *ud, char *colorspec )
       return -1;
    }
    ac_color_grid_set (ud);
-   g_list_foreach(ud->panelList, (GFunc) pa_panel_color_grid_set, ud->pg_color );
+   g_list_foreach(ud->ag->panelList, (GFunc) pa_panel_color_grid_set, ud->pg_color );
    ap_all_redraw(ud);
    return 0;
 }
@@ -434,7 +434,7 @@ ac_color_panel_colors_gaction (GSimpleAction *action, GVariant *param, gpointer 
 
    label = gtk_label_new (_("Cursor 0 Color:") );
    gtk_widget_set_valign ( GTK_WIDGET (label), 0.5); 
-   color = ud->cursors[0]->color;
+   color = ud->ag->cursors[0]->color;
    picker =  gtk_color_button_new_with_rgba (color);
    gtk_grid_attach(GTK_GRID(table),  label, 
                 /* left,    top,  width,   height    */
@@ -447,7 +447,7 @@ ac_color_panel_colors_gaction (GSimpleAction *action, GVariant *param, gpointer 
 
    label = gtk_label_new (_("Cursor 1 Color:") );
    gtk_widget_set_valign ( GTK_WIDGET (label), 0.5); 
-   color = ud->cursors[1]->color;
+   color = ud->ag->cursors[1]->color;
    picker =  gtk_color_button_new_with_rgba (color);
    gtk_grid_attach(GTK_GRID(table),  label, 
                 /* left,    top,  width,   height    */

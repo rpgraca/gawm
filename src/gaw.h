@@ -34,6 +34,7 @@ typedef struct _UserData UserData;
 #include <gawpanel.h>
 #include <gawcursor.h>
 #include <gawwave.h>
+#include <gawpgroup.h>
 #include <gawdnd.h>
 #include <gawda.h>
 #include <gawgrip.h>
@@ -95,6 +96,19 @@ struct _AwSubmenuAction {
  * Global structures
  */
 
+/*
+ * GawTab - a tab containing panel groups
+ */
+typedef struct _GawTab GawTab;
+
+struct _GawTab {
+   UserData *ud;
+   gchar *name;                  /* tab label */
+   GtkWidget *tab_content;       /* top-level container for tab */
+   GList *groupList;             /* list of PanelGroup* in this tab */
+   PanelGroup *active_group;     /* active group in this tab */
+};
+
 struct _UserData {
    gchar *prog;
    UserPrefs *up;         /* pointer to preference structure */
@@ -104,8 +118,6 @@ struct _UserData {
    GtkWidget *window;       /* top level window */
    GtkWidget *globalTable;  /* global table to contains the other widgets */
    GtkWidget *dialog_window;
-   GtkWidget *meas_hbox;   /* hbox containing x measure buttons */
-   int meas_hbox_shown;  /* 1 hbox containing x measure buttons is displayed */
    GtkWidget *menuBar;   /* menu bar */
    GMenuModel *algomodel;      /* menu model for algo selection */
    AwSubmenuAction *algodata;  /* data for algo action */
@@ -113,25 +125,14 @@ struct _UserData {
    AwSubmenuAction *xconvdata;  /* data for xconv action */
    GMenuModel *vlmmodel;     /* menu model for variable list  */
    GtkWidget *toolBar; /* tool bar */
-   GtkWidget *panel_scrolled; /*  scrolled window for panel table */
    GtkWidget *hpaned;         /*  horizontal paned: signal list | panels */
    GtkWidget *siglist_scrolled; /* scrolled window for signal list pane */
    GtkWidget *siglist_box;    /* vbox inside siglist_scrolled for signal lists */
-   int sbSize;                /* allocated size for the scrollbar */
-   GtkWidget *allline_box; /*   hbox for logXbox, xlabels */
    GtkActionGroup *actions;   /* action group for mainmenu     */
    GtkActionGroup *vlactions; /* action group for variable list */
    GtkWidget *statusbar;   /* bottom status bar */
    GtkWidget *statusLabel; /* label in bottom status bar */
-   GList *xlabel_list;        /* xlabel list */
    GList *destdata_list;      /* DnDDestData * list */
-   GtkWidget *xlabel_table;   /* gtktable for xlabels */
-   GtkWidget *xlabel_ev_box;
-   GtkWidget *xlabel_box;
-   GtkWidget *logx_box;
-   GtkWidget *xscrollbar;
-   GtkAdjustment *xadj;
-   GtkWidget *win_xlabel_log;
 
    GdkRGBA  *bg_color;     /* color for background */
    GdkRGBA  *pg_color;     /* color for panel grid graticule */
@@ -147,36 +148,27 @@ struct _UserData {
    int rate;             /* sample rate for writing .wav files */
    gchar *printFmt;      /* printf format used to export write file */
    gint  reqpanels;
-   
-   AWCursor **cursors;  /* 3 cursor storage pointer */
-   int last_dragged_cursor;  /* index (0 or 1) of the last dragged cursor */
-   
-   GtkWidget *panelTable;     /* gtk table for panels */
-   GList *panelList;          /* list of panels  */
-   WavePanel *selected_panel; /* selected panel */
-   VisibleWave *last_clicked_wave; /* last wave clicked in drawing area */
-   WDataSet *curwds;       /* the last dataset used; for x processing */
 
-   GawLabels *xLabels;     /* structure to hold data about the axis */
+   VisibleWave *last_clicked_wave; /* last wave clicked in drawing area */
+
    int char_width;         /* char width  in pixel for the default font */
    int char_height;        /* char height in pixel for the default font */
-   
+
    MouseState mouseState;
    gint drag_button;      /* which button was dragged   */
    int button_down;
    SelRange *srange;       /* structure to store selected range */
-   
+
    int suppress_redraw;
    int NWColors ;        /* # of wavecolorN styles expected in the .gtkrc */
-   
-   GList *all_measure_buttons; /* measure buttons list */
+
    GList *wdata_list;     /* dataset list */
-   
+
    GSList *imgFormats;   /* list of writtable img formats */
    const gchar *imgFmt;  /* selected img format */
-   
+
    GawSndData *sndData;   /* sound data structure */
-   
+
    int listenPort;
    void *gawio;           /* pointer to gawio struct */
    int gripdelta;         /* delta on displacement of the grip */
@@ -184,17 +176,19 @@ struct _UserData {
    int winHeight;         /* main current window height */
    int reqWinWidth;       /* requested main current window actual width */
    int reqWinHeight;      /* requested main current window height */
-   int maxHeight;         /* maximum height for panel_scrolled */
    int waHeight;          /* work area height */
-   int panelWidth;        /* current panel width */
-   int panelHeight;       /* current panel height */
-   int panelScrolledHeight;  /* current height of panel scrolled widget */
    GawText *gtexttmp;       /* temp pointer to a Gawtext */
    const gchar *panelfont;  /* panel fontname */
    /* sensitive widget */
-   GtkWidget *LogX;   
-   GtkWidget *LogYPanel;   
-   GtkWidget *moreYlabels;   
+   GtkWidget *LogX;
+   GtkWidget *LogYPanel;
+   GtkWidget *moreYlabels;
+
+   /* Tab and group management */
+   GtkWidget *notebook;          /* GtkNotebook for tabs */
+   GList *tabList;               /* list of GawTab* */
+   GawTab *active_tab;           /* currently active tab */
+   PanelGroup *ag;               /* shortcut: active_tab->active_group */
 };
 
 /*
@@ -293,6 +287,15 @@ void aw_xschem_clear_annotations(UserData *ud);
 
 void aio_create_channel(UserData *ud);
 void aio_destroy_channel(UserData *ud);
+
+GawTab *aw_tab_new(UserData *ud, const gchar *name);
+void aw_tab_destroy(GawTab *tab);
+PanelGroup *aw_tab_add_group(GawTab *tab, const gchar *name);
+void aw_set_active_group(UserData *ud, PanelGroup *pg);
+void aw_notebook_switch_page_cb(GtkNotebook *notebook, GtkWidget *page,
+                                guint page_num, gpointer user_data);
+void aw_scrollbar_show_cb(GtkWidget *widget, gpointer pdata);
+void aw_scrollbar_hide_cb(GtkWidget *widget, gpointer pdata);
 
 void ac_bp_color_wave_gaction (GSimpleAction *action, GVariant *param, gpointer user_data );
 void ac_pop_color_grid_gaction (GSimpleAction *action, GVariant *param, gpointer user_data );

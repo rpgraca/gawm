@@ -53,7 +53,7 @@ void gawdraw_wave_algo0 (VisibleWave *vw, WavePanel *wp)
    double yval;
    double xmin = wavevar_ivar_get_min(vw->var) ;
    double xmax = wavevar_ivar_get_max(vw->var) ;
-   GawLabels *lbx = wp->ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    GawLabels *lby = wp->yLabels;
    cairo_t *cr = wp->cr;
    
@@ -97,7 +97,7 @@ void gawdraw_wave_algo (VisibleWave *vw, WavePanel *wp)
    int i;
    double xval;
    double yval;
-   GawLabels *lbx = wp->ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    GawLabels *lby = wp->yLabels;
    cairo_t *cr = wp->cr;
    
@@ -220,7 +220,7 @@ void gawdraw_lineclip(VisibleWave *vw, WavePanel *wp)
    int i;
    double xval1, yval1;
    double xval0d, yval0d, xval1d, yval1d;
-   GawLabels *lbx = wp->ud->xLabels;
+   GawLabels *lbx = wp->pg->xLabels;
    GawLabels *lby = wp->yLabels;
    cairo_t *cr = wp->cr;
    

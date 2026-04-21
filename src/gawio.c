@@ -165,7 +165,7 @@ static int aio_copyvar( GawIoData *gawio, char *pline )
    /* /stefan */
 
    WaveVar *var = ( WaveVar *) dataset_get_var_for_name(gawio->wds, varName );
-   WavePanel *wp =  (WavePanel *) g_list_nth_data (ud->panelList, panelno);
+   WavePanel *wp =  (WavePanel *) g_list_nth_data (ud->ag->panelList, panelno);
    
    if ( ! var ) {
       gawio->msg = g_strdup_printf( _("Variable %s not defined"), varName );
@@ -202,7 +202,7 @@ static int aio_delvar( GawIoData *gawio, char *pline )
    char *panel = stu_token_next( &pline, " ", " " );
    int panelno = atoi(panel + 1);
    WaveVar *var = ( WaveVar *) dataset_get_var_for_name(gawio->wds, varName );
-   WavePanel *wp =  (WavePanel *) g_list_nth_data (ud->panelList, panelno);
+   WavePanel *wp =  (WavePanel *) g_list_nth_data (ud->ag->panelList, panelno);
    
    ap_remove_all_wave_if_panel_and_var(wp, var);
    return 0;
@@ -284,7 +284,7 @@ static int aio_logx_set( GawIoData *gawio, char *pline )
       is_on = 1;
    }
    gawio->ud->up->setLogX = is_on;
-   al_label_set_logAxis( gawio->ud->xLabels, is_on );
+   al_label_set_logAxis( gawio->ud->ag->xLabels, is_on );
    ap_all_redraw(gawio->ud);
    return 0;
 }
@@ -334,7 +334,7 @@ static int aio_panel_add( GawIoData *gawio, char *pline )
    }
    int num = atoi(tok);
    int op = 0; /* add */
-   int npanels = g_list_length( ud->panelList);
+   int npanels = g_list_length( ud->ag->panelList);
    
    if ( *tok == '+' || *tok == '-' ) {
       num = npanels + num;
@@ -531,7 +531,7 @@ static int aio_get_cursor( GawIoData *gawio, char *pline )
       gawio->msg = g_strdup_printf(_("Invalid cursor index %d"), idx);
       return -1;
    }
-   AWCursor *csp = ud->cursors[idx];
+   AWCursor *csp = ud->ag->cursors[idx];
    if (!csp->shown) {
       gawio->msg = g_strdup_printf(_("Cursor %d not visible"), idx);
       return -1;
@@ -661,8 +661,8 @@ int aio_process_line( GawIoData *gawio, gchar *linebuf, gsize length)
       if ( ! app_strcasecmp( ptab->name, s) ) {
 	 if (  ptab->check_wds ) {
 	    if ( ! gawio->wds ) {
-               if ( gawio->ud->curwds ) {
-                  gawio->wds = gawio->ud->curwds;
+               if ( gawio->ud->ag->curwds ) {
+                  gawio->wds = gawio->ud->ag->curwds;
                } else if ( gawio->ud->wdata_list ) {
                   /* Fallback to the first loaded table */
                   DataFile *wdata = (DataFile *) gawio->ud->wdata_list->data;

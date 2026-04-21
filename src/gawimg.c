@@ -433,17 +433,17 @@ GdkPixbuf *im_export_create_pixbuf (UserData *ud)
    w = gtk_widget_get_window (widget);
    
 
-   widget = ud->meas_hbox;
+   widget = ud->ag->meas_hbox;
    gtk_widget_get_allocation (widget, &walloc);
-//   print_rect( widget, "ud->meas_hbox");
+//   print_rect( widget, "ud->ag->meas_hbox");
    x = walloc.x;
    y = walloc.y;
    width = walloc.width;
    height = y;
 
-   widget = ud->xlabel_ev_box;
+   widget = ud->ag->xlabel_ev_box;
    gtk_widget_get_allocation (widget, &walloc);
-//   print_rect( widget, "ud->xlabel_ev_box");
+//   print_rect( widget, "ud->ag->xlabel_ev_box");
    height = walloc.y - height + walloc.height;
 
 //   fprintf( stderr, "x = %d, y = %d width = %d height = %d\n",
