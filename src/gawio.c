@@ -208,6 +208,15 @@ static int aio_delvar( GawIoData *gawio, char *pline )
    
    char *varName = stu_token_next( &pline, " ", " " );
    char *panel = stu_token_next( &pline, " ", " " );
+
+   /* A missing variable name or panel token means the command is
+      malformed.  Bail with an error instead of dereferencing the NULL
+      token in atoi(panel + 1) below, which otherwise segfaults. */
+   if ( ! varName || ! panel ) {
+      gawio->msg = g_strdup_printf( _("Malformed delvar command: missing variable name or panel") );
+      return -1;
+   }
+
    int panelno = atoi(panel + 1);
    WaveVar *var = ( WaveVar *) dataset_get_var_for_name(gawio->wds, varName );
    WavePanel *wp =  (WavePanel *) g_list_nth_data (ud->ag->panelList, panelno);

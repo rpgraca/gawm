@@ -1,11 +1,11 @@
 #!/bin/sh
-# Regression: a malformed `copyvar` command must be rejected without crashing.
+# Regression: malformed `copyvar`/`delvar` commands must be rejected without crashing.
 #
 # Builds a disposable out-of-tree gawm, then compiles and links the C harness
 # `test_copyvar_harness.c` against the freshly built objects and runs it.
-# The harness feeds a `copyvar` line with no arguments through the real
-# aio_process_line -> aio_copyvar path and asserts the server stays alive and
-# returns an error.  See test_copyvar_harness.c for the assertion contract.
+# The harness feeds truncated `copyvar`/`delvar` lines (no arguments) through
+# the real aio_process_line path and asserts the server stays alive and returns
+# an error for each.  See test_copyvar_harness.c for the assertion contract.
 #
 # RED  (unmodified): the process dies by SIGSEGV (exit 139).
 # GREEN (fixed)    : exits 0 and prints "PASS: ...".
@@ -179,12 +179,12 @@ OUT=$("$HARNESS_BIN" 2>&1)
 STATUS=$?
 echo "$OUT"
 if [ "$STATUS" -ne 0 ]; then
-    echo "[FAIL] malformed copyvar did not survive ($STATUS)" >&2
+    echo "[FAIL] a malformed copyvar/delvar did not survive ($STATUS)" >&2
     exit 1
 fi
-if ! printf '%s\n' "$OUT" | grep -q "PASS: malformed copyvar returned error without crashing"; then
+if ! printf '%s\n' "$OUT" | grep -q "PASS: malformed copyvar/delvar returned error without crashing"; then
     echo "[FAIL] missing PASS marker" >&2
     exit 1
 fi
-echo "[ok] harness run (no crash, error returned)"
+echo "[ok] harness run (no crash, error returned for all commands)"
 exit 0
