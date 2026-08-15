@@ -10,6 +10,8 @@ class Gawm:
         self.port = port or int(os.environ.get("GAWM_PORT", 0)) or 4242
         self.proc = None
         self.sock = None
+        self._reader = None
+        self._reader_sock = None
 
     def start(self):
         """Start a new gawm process and connect."""
@@ -39,12 +41,24 @@ class Gawm:
         self.sock.sendall((cmd + "\n").encode("utf-8"))
         return True
 
+    def _get_reader(self):
+        if not self.sock:
+            raise RuntimeError("Not connected to gawm")
+        if self._reader_sock is not self.sock:
+            if self._reader is not None:
+                self._reader.close()
+            self._reader = self.sock.makefile()
+            self._reader_sock = self.sock
+        return self._reader
+
     def _wait_for_ack(self):
-        data = self.sock.recv(4096).decode("utf-8")
+        data = self._get_reader().readline()
+        if data == "":
+            print("Gawm Error: unexpected EOF waiting for acknowledgement")
+            return False
         if data.strip() != "":
-            if not data.startswith("\n"):
-                print(f"Gawm Error: {data.strip()}")
-                return False
+            print(f"Gawm Error: {data.strip()}")
+            return False
         return True
 
     # --- Data retrieval ---
@@ -53,7 +67,7 @@ class Gawm:
         """Get waveform data from gawm by name. Returns dict with 'x' and 'y' numpy arrays."""
         self.send_command(f"get_data {name}")
 
-        f = self.sock.makefile()
+        f = self._get_reader()
         line = f.readline()
         if not line or not line.strip().isdigit():
             print(f"Gawm Error: {line.strip()}")
@@ -65,16 +79,21 @@ class Gawm:
 
         for i in range(nrows):
             line = f.readline()
+            if not line:
+                print("Gawm Error: unexpected EOF reading waveform data")
+                return None
             vals = list(map(float, line.split()))
             x[i] = vals[0]
             y[i] = vals[1]
 
+        if not self._wait_for_ack():
+            return None
         return {"x": x, "y": y}
 
     def get_tables(self):
         """Get list of loaded table names."""
         self.send_command("table_list")
-        f = self.sock.makefile()
+        f = self._get_reader()
         line = f.readline()
         if not line or not line.strip().isdigit():
             print(f"Gawm Error: {line.strip()}")
@@ -83,26 +102,40 @@ class Gawm:
         count = int(line.strip())
         tables = []
         for _ in range(count):
-            tables.append(f.readline().strip())
+            line = f.readline()
+            if not line:
+                print("Gawm Error: unexpected EOF reading table list")
+                return []
+            tables.append(line.strip())
+        if not self._wait_for_ack():
+            return []
         return tables
 
     def get_cursor(self, idx=0):
         """Get cursor X position. Returns float or None if cursor is not visible."""
         self.send_command(f"get_cursor {idx}")
-        f = self.sock.makefile()
-        line = f.readline().strip()
+        f = self._get_reader()
+        response = f.readline()
+        if response == "":
+            print("Gawm Error: unexpected EOF reading cursor")
+            return None
+        line = response.strip()
         if line == "":
+            self._wait_for_ack()
             return None
         try:
-            return float(line)
+            x = float(line)
         except ValueError:
             print(f"Gawm Error: {line}")
             return None
+        if not self._wait_for_ack():
+            return None
+        return x
 
     def get_values_at(self, x):
         """Interpolate all signals at X position. Returns dict {name: value}."""
         self.send_command(f"get_values_at {x}")
-        f = self.sock.makefile()
+        f = self._get_reader()
         line = f.readline()
         if not line or not line.strip().lstrip("-").isdigit():
             print(f"Gawm Error: {line.strip()}")
@@ -110,9 +143,15 @@ class Gawm:
         nvars = int(line.strip())
         result = {}
         for _ in range(nvars):
-            parts = f.readline().split()
+            line = f.readline()
+            if not line:
+                print("Gawm Error: unexpected EOF reading values")
+                return {}
+            parts = line.split()
             if len(parts) >= 2:
                 result[parts[0]] = float(parts[1])
+        if not self._wait_for_ack():
+            return {}
         return result
 
     def get_cursor_values(self, idx=0):
@@ -139,17 +178,22 @@ class Gawm:
             panel: If set to an int, auto-display waveforms in that panel.
         """
         self.send_command(f"table_new {table_name}")
+        self._wait_for_ack()
         vars_str = "x " + " ".join(names)
         self.send_command(f"variables {vars_str}")
+        self._wait_for_ack()
         self.send_command("rowdatas")
+        self._wait_for_ack()
 
         data_matrix = np.column_stack([x_data] + list(y_datas))
 
         for row in data_matrix:
             row_str = " ".join(map(str, row))
             self.sock.sendall((row_str + "\n").encode("utf-8"))
+            self._wait_for_ack()
 
         self.send_command("enddata")
+        self._wait_for_ack()
 
         if panel is not None:
             for name in names:
@@ -307,6 +351,10 @@ class Gawm:
     # --- Lifecycle ---
 
     def close(self):
+        if self._reader:
+            self._reader.close()
+            self._reader = None
+            self._reader_sock = None
         if self.sock:
             self.sock.close()
         if self.proc:

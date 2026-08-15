@@ -148,6 +148,14 @@ static int aio_copyvar( GawIoData *gawio, char *pline )
    char *panel = stu_token_next( &pline, " ", " " );
    char *color = stu_token_next( &pline, " ", " " ); /* stefan */
    
+   /* A missing variable name or panel token means the command is
+      malformed.  Bail with an error instead of dereferencing the NULL
+      token in atoi(panel + 1) below, which otherwise segfaults. */
+   if ( ! varName || ! panel ) {
+      gawio->msg = g_strdup_printf( _("Malformed copyvar command: missing variable name or panel") );
+      return -1;
+   }
+
    int panelno = atoi(panel + 1);
 
    /* stefan */

@@ -17,7 +17,7 @@ gawm_SOURCES = gawmain.c gawapp.c userprefs.c gawzoom.c gawmisc.c \
               gawmenus.c gawmenus.h
 
 INCLUDES = -I$(top_srcdir)/lib @GAW_CFLAGS@
-gawm_LDADD = $(top_srcdir)/lib/libload.a \
+gawm_LDADD = $(top_builddir)/lib/libload.a \
             -L$(prefix)/lib @GAW_LDFLAGS@  -lXext -lm 
 
 ###   $(top_srcdir)/lib/libtracemem.a
