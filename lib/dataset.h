@@ -36,6 +36,7 @@ struct _WDataSet {
    char *setname;            /* name of the sweep, if any, else NULL */
    GArray *varmap;           /* array of int map col num to var num  */
    int mapshift;             /* number of bit to shift for the index */
+   GPtrArray *dvars;         /* array of derived WaveVars owned here */
 };
 
 /*

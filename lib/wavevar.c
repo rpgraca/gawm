@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 
 #include <wavetable.h>
 #include <wavevar.h>
@@ -15,6 +16,8 @@
 #ifdef TRACE_MEM
 #include <tracemem.h>
 #endif
+
+static double wavevar_derive_value(int derive_mode, double re, double im);
         
 
 
@@ -98,11 +101,29 @@ double wavevar_val_get_col_max(WaveVar *var, int col )
 
 double wavevar_val_get_min(WaveVar *var )
 {
+   if (var->derive_mode && var->ncols >= 2) {
+      int nrows = wavevar_nrows_get(var);
+      double min_v = G_MAXDOUBLE;
+      for (int i = 0; i < nrows; i++) {
+         double v = wavevar_val_get(var, i);
+         if (v < min_v) min_v = v;
+      }
+      return (nrows > 0) ? min_v : 0.0;
+   }
    return wavevar_val_get_col_min(var, 0 );
 }
 
 double wavevar_val_get_max(WaveVar *var )
 {
+   if (var->derive_mode && var->ncols >= 2) {
+      int nrows = wavevar_nrows_get(var);
+      double max_v = -G_MAXDOUBLE;
+      for (int i = 0; i < nrows; i++) {
+         double v = wavevar_val_get(var, i);
+         if (v > max_v) max_v = v;
+      }
+      return (nrows > 0) ? max_v : 0.0;
+   }
    return wavevar_val_get_col_max(var, 0);
 }
 
@@ -119,7 +140,12 @@ double wavevar_ivar_get(WaveVar *var, int row )
  */
 double wavevar_val_get(WaveVar *var, int row )
 {
-   return dataset_val_get(var->wds, row, var->colno );
+   double re = dataset_val_get(var->wds, row, var->colno);
+   if (var->derive_mode && var->ncols >= 2) {
+      double im = dataset_val_get(var->wds, row, var->colno + 1);
+      return wavevar_derive_value(var->derive_mode, re, im);
+   }
+   return re;
 }
 
 int wavevar_nrows_get(WaveVar *var)
@@ -146,16 +172,75 @@ double wavevar_ivar_get_max(WaveVar *var )
 
 
 /*
+ * Create a derived WaveVar (magnitude or phase) from a complex source variable.
+ * The derived var shares the same WDataSet but has its own name and derive_mode.
+ *
+ * Get-or-create: keyed by (src->wds, src->colno, derive_mode).  If a derived
+ * var for that key already exists, the existing pointer is returned.  The
+ * canonical name is "<src->varName>:mag" / "<src->varName>:phase".  The
+ * derived var is registered with the dataset and owned by it (dataset owns
+ * the dvars container); WV_DERIVE_NORMAL returns src itself.
+ */
+WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode)
+{
+   WDataSet *wds = src->wds;
+   int i;
+   WaveVar *wv;
+   char *name;
+   const char *canon = NULL;
+
+   if (derive_mode == WV_DERIVE_NORMAL) {
+      return src;
+   }
+
+   switch (derive_mode) {
+   case WV_DERIVE_MAGNITUDE:
+      canon = "mag";
+      break;
+   case WV_DERIVE_PHASE_DEG:
+      canon = "phase";
+      break;
+   default:
+      return src;
+   }
+
+   for (i = 0; i < wds->dvars->len; i++) {
+      wv = (WaveVar *) g_ptr_array_index(wds->dvars, i);
+      if (wv->colno == src->colno && wv->derive_mode == derive_mode) {
+         return wv;
+      }
+   }
+
+   name = app_strdup_printf("%s:%s", src->varName, canon);
+   wv = wavevar_new(src->wds, name, src->type, src->colno, src->ncols);
+   wv->derive_mode = derive_mode;
+   wavevar_set_wavetable(wv, src->wvtable, src->tblno);
+   app_free(name);
+   g_ptr_array_add(wds->dvars, (gpointer) wv);
+   return wv;
+}
+
+/*
+ * Apply derive_mode to a (real, imag) pair.
+ */
+static double wavevar_derive_value(int derive_mode, double re, double im)
+{
+   switch (derive_mode) {
+   case WV_DERIVE_MAGNITUDE:
+      return hypot(re, im);
+   case WV_DERIVE_PHASE_DEG:
+      return atan2(im, re) * (180.0 / M_PI);
+   default:
+      return re;
+   }
+}
+
+/*
  * return the value of the dependent variable dv at the point where
  * its associated independent variable has the value ival.
  *
- * FIXME:tell 
- * make this fill in an array of dependent values,
- * one for each column in the specified dependent variable.
- * This will be better than making the client call us once for each column,
- * because we'll only have to search for the independent value once.
- * (quick hack until we need support for complex and other multicolumn vars:
- * just return first column's value.)
+ * For complex variables with derive_mode set, interpolates both real and
+ * imaginary parts independently, then computes magnitude or phase.
  */
 double wavevar_interp_value(WaveVar *dv, double ival)
 {
@@ -164,14 +249,19 @@ double wavevar_interp_value(WaveVar *dv, double ival)
    double ly, ry;  /* dependent variable's value at li and ri */
    WDataSet *wds = dv->wds;
    int nrows = dataset_get_nrows(wds);
-   
+
    if ( nrows <= 0 ) {
       return 0.0;
    }
-   
+
    li = dataset_find_row_index(wds, ival);
    ri = li + 1;
    if (ri >= nrows ) {
+      if (dv->derive_mode && dv->ncols >= 2) {
+         double re = dataset_val_get(wds, nrows - 1, dv->colno);
+         double im = dataset_val_get(wds, nrows - 1, dv->colno + 1);
+         return wavevar_derive_value(dv->derive_mode, re, im);
+      }
       return dataset_val_get(wds, nrows - 1, dv->colno );
    }
 
@@ -186,13 +276,24 @@ double wavevar_interp_value(WaveVar *dv, double ival)
    ry = dataset_val_get(wds, ri, dv->colno );
 
    if (ival > rx ) { /* no extrapolation allowed! */
+      if (dv->derive_mode && dv->ncols >= 2) {
+         double im = dataset_val_get(wds, ri, dv->colno + 1);
+         return wavevar_derive_value(dv->derive_mode, ry, im);
+      }
       return ry;
    }
-   
-//double val =  ly + (ry - ly) * ((ival - lx)/(rx - lx));
-//fprintf(stderr, "ival = %f, li = %d ri = %d, lx = %g, rx = %g, ly = %g, ry = %g, val = %g\n",
-//	   ival, li, ri, lx, rx, ly, ry, val);
-   return ly + (ry - ly) * ((ival - lx) / (rx - lx));
+
+   double frac = (ival - lx) / (rx - lx);
+   double val_re = ly + (ry - ly) * frac;
+
+   if (dv->derive_mode && dv->ncols >= 2) {
+      double lim = dataset_val_get(wds, li, dv->colno + 1);
+      double rim = dataset_val_get(wds, ri, dv->colno + 1);
+      double val_im = lim + (rim - lim) * frac;
+      return wavevar_derive_value(dv->derive_mode, val_re, val_im);
+   }
+
+   return val_re;
 }
 
 /*
@@ -224,7 +325,7 @@ double wavevar_maxof_value(WaveVar *dv, double ival, int npoints)
       if (ri >= nrows ) {
 	 ri = nrows - 1;
       }
-      val = dataset_val_get(wds, ri, dv->colno );
+      val = wavevar_val_get(dv, ri);
       yval0 = MIN( yval0, val);
       yval1 = MAX( yval1, val);
 // fprintf(stderr, "ri %d, val = %f, yval = %g\n", ri, val, yval);
@@ -275,7 +376,7 @@ void wavevar_get_range(WaveVar *dv, double x_start, double x_end, double *y_min,
 
    /* Check points within the interval */
    for (i = i_start; i <= i_end; i++) {
-      val = dataset_val_get(wds, i, dv->colno);
+      val = wavevar_val_get(dv, i);
       if (val < min_v) min_v = val;
       if (val > max_v) max_v = val;
    }

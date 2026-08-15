@@ -19,6 +19,10 @@ typedef enum {
         FREQUENCY = 4,
 } VarType;
 
+/* Derived-value modes for complex variables */
+#define WV_DERIVE_NORMAL    0  /* use raw column value (real part for complex) */
+#define WV_DERIVE_MAGNITUDE 1  /* sqrt(re^2 + im^2) */
+#define WV_DERIVE_PHASE_DEG 2  /* atan2(im, re) * 180/pi */
 
 struct _WaveVar {
    AppClass parent;
@@ -27,6 +31,7 @@ struct _WaveVar {
    WDataSet *wds;           /* data for one or more columns */
    int colno;               /* index (column) in WDataSet   */
    int ncols;               /* num cols used by this variable (complex is 2) */
+   int derive_mode;         /* WV_DERIVE_NORMAL, _MAGNITUDE, or _PHASE_DEG */
    AppClass *wvtable;       /* backpointer to the caller Wave var table  */
    int tblno;               /* number of the table containing this var */
    double prev_y2;          /* yval[-2]  temp value              */
@@ -67,5 +72,7 @@ double wavevar_ivar_get_min(WaveVar *wv );
 
 char *wavevar_type2str( int type);
 int wavevar_str2type( char *s);
+
+WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode);
 
 #endif /* SPICEVAR_H */

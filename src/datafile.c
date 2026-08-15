@@ -307,13 +307,55 @@ datafile_add_tree_var(gpointer d, gpointer p)
       parent = &parent_iter;
    }
 
-   /* Append leaf node (after any folders) */
-   gtk_tree_store_append(wdata->wlist_store, &iter, parent);
-   gtk_tree_store_set(wdata->wlist_store, &iter,
-                     COL_LABEL, leaf,
-                     COL_VAR, var,
-                     COL_FULLNAME, var->varName,
-                     -1);
+   /* For complex variables (ncols == 2), create a folder with real/mag/phase leaves */
+   if (var->ncols >= 2) {
+      GtkTreeIter folder_iter, child_iter;
+      WaveVar *mag_var, *phase_var;
+
+      /* Create folder node with signal name */
+      gtk_tree_store_append(wdata->wlist_store, &folder_iter, parent);
+      gtk_tree_store_set(wdata->wlist_store, &folder_iter,
+                        COL_LABEL, leaf,
+                        COL_VAR, NULL,
+                        COL_FULLNAME, var->varName,
+                        -1);
+
+      /* Create derived WaveVars for magnitude and phase (dataset owns them) */
+      mag_var = wavevar_new_derived(var, ":mag", WV_DERIVE_MAGNITUDE);
+      phase_var = wavevar_new_derived(var, ":phase", WV_DERIVE_PHASE_DEG);
+
+      /* Add real (raw) leaf */
+      gtk_tree_store_append(wdata->wlist_store, &child_iter, &folder_iter);
+      gtk_tree_store_set(wdata->wlist_store, &child_iter,
+                        COL_LABEL, "Real",
+                        COL_VAR, var,
+                        COL_FULLNAME, var->varName,
+                        -1);
+
+      /* Add magnitude leaf */
+      gtk_tree_store_append(wdata->wlist_store, &child_iter, &folder_iter);
+      gtk_tree_store_set(wdata->wlist_store, &child_iter,
+                        COL_LABEL, "Magnitude",
+                        COL_VAR, mag_var,
+                        COL_FULLNAME, mag_var->varName,
+                        -1);
+
+      /* Add phase leaf */
+      gtk_tree_store_append(wdata->wlist_store, &child_iter, &folder_iter);
+      gtk_tree_store_set(wdata->wlist_store, &child_iter,
+                        COL_LABEL, "Phase (deg)",
+                        COL_VAR, phase_var,
+                        COL_FULLNAME, phase_var->varName,
+                        -1);
+   } else {
+      /* Append leaf node (after any folders) */
+      gtk_tree_store_append(wdata->wlist_store, &iter, parent);
+      gtk_tree_store_set(wdata->wlist_store, &iter,
+                        COL_LABEL, leaf,
+                        COL_VAR, var,
+                        COL_FULLNAME, var->varName,
+                        -1);
+   }
 
    for (i = 0; i < npath; i++) {
       g_free(path[i]);
