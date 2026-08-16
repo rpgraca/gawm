@@ -59,7 +59,7 @@ void dataset_destroy(void *wds)
    }
    app_free(this->setname);
    dataset_remove_all_vars( this);
-   g_ptr_array_free (this->vars, FALSE);
+   g_ptr_array_free (this->vars, TRUE);
    if (this->dvars != NULL) {
       int i;
       for (i = 0; i < this->dvars->len; i++) {
