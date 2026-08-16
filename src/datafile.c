@@ -308,7 +308,7 @@ datafile_add_tree_var(gpointer d, gpointer p)
    }
 
    /* For complex variables (ncols == 2), create a folder with real/mag/phase leaves */
-   if (var->ncols >= 2) {
+   if (var->ncols == 2) {
       GtkTreeIter folder_iter, child_iter;
       WaveVar *mag_var, *phase_var;
 

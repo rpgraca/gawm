@@ -101,7 +101,7 @@ double wavevar_val_get_col_max(WaveVar *var, int col )
 
 double wavevar_val_get_min(WaveVar *var )
 {
-   if (var->derive_mode && var->ncols >= 2) {
+   if (var->derive_mode && var->ncols == 2) {
       int nrows = wavevar_nrows_get(var);
       double min_v = G_MAXDOUBLE;
       for (int i = 0; i < nrows; i++) {
@@ -115,7 +115,7 @@ double wavevar_val_get_min(WaveVar *var )
 
 double wavevar_val_get_max(WaveVar *var )
 {
-   if (var->derive_mode && var->ncols >= 2) {
+   if (var->derive_mode && var->ncols == 2) {
       int nrows = wavevar_nrows_get(var);
       double max_v = -G_MAXDOUBLE;
       for (int i = 0; i < nrows; i++) {
@@ -141,7 +141,7 @@ double wavevar_ivar_get(WaveVar *var, int row )
 double wavevar_val_get(WaveVar *var, int row )
 {
    double re = dataset_val_get(var->wds, row, var->colno);
-   if (var->derive_mode && var->ncols >= 2) {
+   if (var->derive_mode && var->ncols == 2) {
       double im = dataset_val_get(var->wds, row, var->colno + 1);
       return wavevar_derive_value(var->derive_mode, re, im);
    }
@@ -180,6 +180,11 @@ double wavevar_ivar_get_max(WaveVar *var )
  * canonical name is "<src->varName>:mag" / "<src->varName>:phase".  The
  * derived var is registered with the dataset and owned by it (dataset owns
  * the dvars container); WV_DERIVE_NORMAL returns src itself.
+ *
+ * Complex derivation is only defined for complex variables, which are exactly
+ * 2 columns (real at colno, imag at colno+1).  When src->ncols != 2, src is
+ * returned unchanged (no derived object is created for non-complex sources),
+ * exactly as WV_DERIVE_NORMAL behaves.
  */
 WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode)
 {
@@ -190,6 +195,14 @@ WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode)
    const char *canon = NULL;
 
    if (derive_mode == WV_DERIVE_NORMAL) {
+      return src;
+   }
+
+   /* Complex derivation is defined only for complex variables, which are
+      exactly 2 columns (real at colno, imag at colno+1).  No loader produces
+      ncols > 2; tighten the guard to == 2 so a hypothetical 3+-column
+      variable is never mis-derived (return src unchanged, like NORMAL). */
+   if (src->ncols != 2) {
       return src;
    }
 
@@ -257,7 +270,7 @@ double wavevar_interp_value(WaveVar *dv, double ival)
    li = dataset_find_row_index(wds, ival);
    ri = li + 1;
    if (ri >= nrows ) {
-      if (dv->derive_mode && dv->ncols >= 2) {
+      if (dv->derive_mode && dv->ncols == 2) {
          double re = dataset_val_get(wds, nrows - 1, dv->colno);
          double im = dataset_val_get(wds, nrows - 1, dv->colno + 1);
          return wavevar_derive_value(dv->derive_mode, re, im);
@@ -276,7 +289,7 @@ double wavevar_interp_value(WaveVar *dv, double ival)
    ry = dataset_val_get(wds, ri, dv->colno );
 
    if (ival > rx ) { /* no extrapolation allowed! */
-      if (dv->derive_mode && dv->ncols >= 2) {
+      if (dv->derive_mode && dv->ncols == 2) {
          double im = dataset_val_get(wds, ri, dv->colno + 1);
          return wavevar_derive_value(dv->derive_mode, ry, im);
       }
@@ -286,7 +299,7 @@ double wavevar_interp_value(WaveVar *dv, double ival)
    double frac = (ival - lx) / (rx - lx);
    double val_re = ly + (ry - ly) * frac;
 
-   if (dv->derive_mode && dv->ncols >= 2) {
+   if (dv->derive_mode && dv->ncols == 2) {
       double lim = dataset_val_get(wds, li, dv->colno + 1);
       double rim = dataset_val_get(wds, ri, dv->colno + 1);
       double val_im = lim + (rim - lim) * frac;
