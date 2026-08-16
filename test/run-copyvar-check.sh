@@ -1,9 +1,9 @@
 #!/bin/sh
-# Regression: malformed `copyvar`/`delvar` commands must be rejected without crashing.
+# Regression: malformed `copyvar`/`delvar`/`dataset` commands must be rejected without crashing.
 #
 # Builds a disposable out-of-tree gawm, then compiles and links the C harness
 # `test_copyvar_harness.c` against the freshly built objects and runs it.
-# The harness feeds truncated `copyvar`/`delvar` lines (no arguments) through
+# The harness feeds truncated `copyvar`/`delvar`/`dataset` lines (no arguments) through
 # the real aio_process_line path and asserts the server stays alive and returns
 # an error for each.  See test_copyvar_harness.c for the assertion contract.
 #
@@ -179,10 +179,10 @@ OUT=$("$HARNESS_BIN" 2>&1)
 STATUS=$?
 echo "$OUT"
 if [ "$STATUS" -ne 0 ]; then
-    echo "[FAIL] a malformed copyvar/delvar did not survive ($STATUS)" >&2
+    echo "[FAIL] a malformed copyvar/delvar/dataset did not survive ($STATUS)" >&2
     exit 1
 fi
-if ! printf '%s\n' "$OUT" | grep -q "PASS: malformed copyvar/delvar returned error without crashing"; then
+if ! printf '%s\n' "$OUT" | grep -q "PASS: malformed copyvar/delvar/dataset returned error without crashing"; then
     echo "[FAIL] missing PASS marker" >&2
     exit 1
 fi

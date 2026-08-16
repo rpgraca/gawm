@@ -191,6 +191,15 @@ static int aio_dataset_add( GawIoData *gawio, char *pline )
 {
    msg_dbg("Fonction called %s", pline );
    char *tok = stu_token_next( &pline, " ", " " );
+
+   /* A missing dataset number token means the command is malformed.
+      Bail with an error instead of dereferencing the NULL token in
+      atoi(tok) below, which otherwise segfaults. */
+   if ( ! tok ) {
+      gawio->msg = g_strdup_printf( _("Malformed dataset command: missing dataset number") );
+      return -1;
+   }
+
    int num = atoi(tok);
    WDataSet *wds;
    

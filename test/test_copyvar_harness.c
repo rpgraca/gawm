@@ -63,7 +63,7 @@ check_malformed(const char *cmd)
 int
 main(void)
 {
-   static const char *const cmds[] = { "copyvar", "delvar", NULL };
+   static const char *const cmds[] = { "copyvar", "delvar", "dataset", NULL };
    int i;
    int pass = 1;
 
@@ -74,7 +74,7 @@ main(void)
    }
 
    if (pass) {
-      fprintf(stderr, "PASS: malformed copyvar/delvar returned error without crashing\n");
+      fprintf(stderr, "PASS: malformed copyvar/delvar/dataset returned error without crashing\n");
       return 0;
    }
    return 1;
