@@ -178,7 +178,7 @@ AC_SUBST(GAW_LDFLAGS)
 AC_SUBST(GAWRCDIR)
 
 # Create all the necessary derived files
-AC_CONFIG_FILES([Makefile src/Makefile lib/Makefile po/Makefile.in])
+AC_CONFIG_FILES([Makefile src/Makefile lib/Makefile po/Makefile.in test/Makefile])
 
 AC_OUTPUT
 
