@@ -20,6 +20,7 @@ jobs:
             automake \
             gettext \
             autopoint \
+            python3-numpy \
             pkg-config \
             libglib2.0-dev \
             libgtk-3-dev \
