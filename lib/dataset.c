@@ -218,8 +218,21 @@ void dataset_col_val_add (WDataSet *wds, int row, int col, double val)
    
    if ( ! replace ){
       g_array_append_val(ary, val );
+      dataset_val_set_min_max( wds, col, val );
    } else {
+      double old = g_array_index (ary, double, row );
       g_array_index (ary, double, row ) = val;
+      if ( old == dataset_val_get_min( wds, col ) ||
+           old == dataset_val_get_max( wds, col ) ) {
+         int i;
+         dataset_min_max_init( wds, col );
+         for (i = 0; i < ary->len; i++) {
+            dataset_val_set_min_max( wds, col,
+                                     g_array_index (ary, double, i) );
+         }
+      } else {
+         dataset_val_set_min_max( wds, col, val );
+      }
    }
    if (row >= 0) {
       for (int i = 0; i < wds->dvars->len; i++) {
@@ -227,8 +240,6 @@ void dataset_col_val_add (WDataSet *wds, int row, int col, double val)
          dv->cache_nrows = -1;
       }
    }
-
-   dataset_val_set_min_max( wds, col, val );
 }
 
 /*
