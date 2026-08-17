@@ -176,6 +176,6 @@ if [ "$STATUS" -eq 0 ] && printf '%s\n' "$OUT" | grep -q \
 fi
 
 echo
-echo "VERDICT: RED on current code:" 
+echo "VERDICT: RED on current code:"
 printf '%s\n' "$OUT" | grep '^c\[FAIL\]' | sed 's/^/  /'
 exit 1
