@@ -1,5 +1,5 @@
 #!/bin/sh
-# Acceptance node for the derived-value min/max/range cache (checks G1..G4).
+# Acceptance node for derived-value caching (checks G1..G9).
 #
 # Builds a disposable out-of-tree gawm, compiles AND LINKS only the real
 # lib/libload.a (no GTK/display), then builds test_derived_cache_harness.c
@@ -10,7 +10,7 @@
 # through a dedicated read-only seam `wavevar_derived_cache_valid`.  On a
 # baseline without the cache (no seam, no cache fields) the harness cannot
 # compile/link, which IS the intended RED.  On the fixed code it compiles,
-# links, runs, and exits 0 only when G1..G4 all pass.
+# links, runs, and exits 0 only when G1..G9 all pass.
 #
 # Usage: test/run-derived-cache-check.sh [SRCDIR]   (SRCDIR defaults to repo root)
 set -u
@@ -163,15 +163,15 @@ fi
 echo "[ok] harness link (plain)"
 
 echo
-echo "=== derived-cache behaviour pass (G1..G4) ==="
+echo "=== derived-cache behaviour pass (G1..G9) ==="
 OUT=$("$BIN" 2>&1)
 STATUS=$?
 printf '%s\n' "$OUT"
 
 if [ "$STATUS" -eq 0 ] && printf '%s\n' "$OUT" | grep -q \
-        "^PASS: derived-cache G1-G4 all satisfied"; then
+        "^PASS: derived-cache G1-G9 all satisfied"; then
     echo
-    echo "VERDICT: GREEN - G1..G4 all pass"
+    echo "VERDICT: GREEN - G1..G9 all pass"
     exit 0
 fi
 

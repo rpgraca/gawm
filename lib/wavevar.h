@@ -43,6 +43,7 @@ struct _WaveVar {
    int cache_nrows;         /* dataset nrows at which the cache was computed; -1 = invalid */
    double cache_min;        /* full-column derived min over the sampled rows */
    double cache_max;        /* full-column derived max over the sampled rows */
+   int cache_scans;         /* number of cache misses this var's refresh has served; 0 initially */
 };
 
 /*
@@ -88,5 +89,12 @@ WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode);
    frozen test harness to prove the cache exists and invalidates on nrows
    change. */
 int wavevar_derived_cache_valid(WaveVar *wv);
+
+/* Read-only seam for the derived min/max cache miss/rescan count: returns the
+   number of cache misses that wavevar_derived_cache_refresh has served for
+   this var, or 0 when the var is not a derived complex two-column var.  Used by
+   the frozen test harness to prove a cache miss scans once and a hit scans
+   zero times. */
+int wavevar_derived_cache_scans(WaveVar *wv);
 
 #endif /* SPICEVAR_H */

@@ -1,6 +1,6 @@
 /*
  * test_derived_cache_harness.c - display-free acceptance node for the
- * derived-value min/max/range cache (checks G1..G4).
+ * derived-value min/max/range cache (checks G1..G9).
  *
  * The dirty complex patch rescans the whole dataset every time a derived
  * variable's min/max/range is needed (O(n) per draw on the min/max/range
@@ -21,6 +21,11 @@
  *       the data bounds, and it populates the cache (seam == nrows).
  *   G4  replacing an existing complex sample invalidates the cache even
  *       though nrows is unchanged; fresh min/max match a rescan.
+ *   G5  a new derived var starts invalid with zero cache scans.
+ *   G6  the first derived min access scans exactly once.
+ *   G7  a second access at unchanged data is a cache hit (no new scan).
+ *   G8  phase-derived full-column min/max are cached correctly.
+ *   G9  a partial phase range excludes whole-column extrema.
  *
  * Every check is evaluated and reported (no early abort); the process reports
  * a final PASS only when all checks pass and the seam/cache is present.
@@ -35,6 +40,10 @@
 
 #include <wavevar.h>
 #include <dataset.h>
+
+/* Frozen seam declaration: absent on the pre-fix tree, so this harness links
+ * RED until production exposes the cache miss/rescan count. */
+extern int wavevar_derived_cache_scans(WaveVar *wv);
 
 static int g_checks = 0;
 static int g_failures = 0;
@@ -258,10 +267,72 @@ main(int argc, char **argv)
              "stale cache returned pre-replacement extrema (RED)");
    }
 
+   /* --- G5..G7: scan counter proves miss then hit ----------------------- */
+   {
+      static const double rows[] = {
+         0.0, 3.0,  4.0,
+         1.0, 6.0,  8.0,
+         2.0, -1.0, 1.0,
+      };
+      WDataSet *wds;
+      WaveVar *src, *dmag;
+      double value;
+
+      wds = build_complex(rows, 3, &src);
+      dmag = wavevar_new_derived(src, ":mag", WV_DERIVE_MAGNITUDE);
+      report("G5 new cache is invalid with zero scans",
+             wavevar_derived_cache_valid(dmag) == -1 &&
+             wavevar_derived_cache_scans(dmag) == 0,
+             "cache pre-state/seam mismatch (RED)");
+
+      value = wavevar_val_get_min(dmag);
+      report("G6 first min access scans exactly once",
+             approx(value, sqrt(2.0), 1e-9, 1e-12) &&
+             wavevar_derived_cache_valid(dmag) == 3 &&
+             wavevar_derived_cache_scans(dmag) == 1,
+             "first cache miss did not perform exactly one scan (RED)");
+
+      value = wavevar_val_get_max(dmag);
+      report("G7 second access is a cache hit",
+             approx(value, 10.0, 1e-9, 1e-12) &&
+             wavevar_derived_cache_scans(dmag) == 1,
+             "cache hit rescanned the dataset (RED)");
+   }
+
+   /* --- G8..G9: phase cache and partial-range fallthrough --------------- */
+   {
+      static const double rows[] = {
+         0.0,  1.0,  0.0,   /* phase 0    */
+         1.0,  0.0,  1.0,   /* phase 90   */
+         2.0,  0.0, -1.0,   /* phase -90  */
+         3.0, -1.0,  0.0,   /* phase 180  */
+      };
+      WDataSet *wds;
+      WaveVar *src, *dphase;
+      double ymin, ymax;
+
+      wds = build_complex(rows, 4, &src);
+      dphase = wavevar_new_derived(src, ":phase", WV_DERIVE_PHASE_DEG);
+      ymin = wavevar_val_get_min(dphase);
+      ymax = wavevar_val_get_max(dphase);
+      report("G8 phase cache min/max and scan count",
+             approx(ymin, -90.0, 1e-9, 1e-12) &&
+             approx(ymax, 180.0, 1e-9, 1e-12) &&
+             wavevar_derived_cache_valid(dphase) == 4 &&
+             wavevar_derived_cache_scans(dphase) == 1,
+             "phase cache values/seam mismatch (RED)");
+
+      wavevar_get_range(dphase, 1.0, 2.0, &ymin, &ymax);
+      report("G9 partial phase range excludes whole-column max",
+             approx(ymin, -90.0, 1e-9, 1e-12) &&
+             approx(ymax, 90.0, 1e-9, 1e-12),
+             "partial range used whole-column cache extrema (RED)");
+   }
+
    printf("== derived-cache acceptance: %d/%d checks passed ==\n",
           g_checks - g_failures, g_checks);
    if (g_failures == 0) {
-      printf("PASS: derived-cache G1-G4 all satisfied\n");
+      printf("PASS: derived-cache G1-G9 all satisfied\n");
       return 0;
    }
    printf("FAIL: %d check(s) failed\n", g_failures);

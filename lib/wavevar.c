@@ -50,6 +50,7 @@ void wavevar_construct( WaveVar *wv, WDataSet *wds, char *varName,
    wv->colno = colno ;
    wv->ncols = ncols ;
    wv->cache_nrows = -1;   /* derived min/max cache starts invalid */
+   wv->cache_scans = 0;    /* derived cache miss/rescan count starts at zero */
 }
 
 /** \brief Destructor for the WaveVar object. */
@@ -112,6 +113,7 @@ static void wavevar_derived_cache_refresh(WaveVar *var)
    if (var->cache_nrows == nrows) {
       return;   /* cache hit */
    }
+   var->cache_scans++;   /* servicing a cache miss (incl. the zero-row case) */
    if (nrows > 0) {
       double min_v = G_MAXDOUBLE;
       double max_v = -G_MAXDOUBLE;
@@ -520,4 +522,20 @@ int wavevar_derived_cache_valid(WaveVar *wv)
       return -1;
    }
    return wv->cache_nrows;
+}
+
+/*
+ * Read-only seam for the derived min/max cache miss/rescan count: returns the
+ * number of cache misses wavevar_derived_cache_refresh has served for this
+ * var (each scan of the dataset on a miss, including the zero-row refresh), or
+ * 0 when the var is not a derived complex two-column var.  The frozen test
+ * harness uses this to prove a cache miss rescans exactly once and a hit does
+ * not rescan.
+ */
+int wavevar_derived_cache_scans(WaveVar *wv)
+{
+   if (!(wv->derive_mode && wv->ncols == 2)) {
+      return 0;
+   }
+   return wv->cache_scans;
 }
