@@ -44,6 +44,7 @@ void dataset_construct( WDataSet *wds, int ncols, AppClass *wt, int tblno )
    wds->wvtable = wt;
    wds->tblno = tblno;
    wds->varmap = g_array_new (FALSE, FALSE, sizeof (int) );
+   wds->dvars = g_ptr_array_new ();
    wds->mapshift = 1;
 }
 
@@ -58,7 +59,15 @@ void dataset_destroy(void *wds)
    }
    app_free(this->setname);
    dataset_remove_all_vars( this);
-   g_ptr_array_free (this->vars, FALSE);
+   g_ptr_array_free (this->vars, TRUE);
+   if (this->dvars != NULL) {
+      int i;
+      for (i = 0; i < this->dvars->len; i++) {
+         WaveVar *dv = (WaveVar *) g_ptr_array_index(this->dvars, i);
+         wavevar_destroy(dv);
+      }
+      g_ptr_array_free (this->dvars, TRUE);
+   }
    g_ptr_array_free (this->datas, TRUE);
    g_array_free (this->colMin, TRUE);
    g_array_free (this->colMax, TRUE);
@@ -205,14 +214,32 @@ double dataset_val_get_max(WDataSet *wds, int col )
 void dataset_col_val_add (WDataSet *wds, int row, int col, double val)
 {
    GArray *ary = g_ptr_array_index( wds->datas, col );
+   int replace = row >= 0 && row < ary->len;
    
-   if (  row < 0 || row >= ary->len ){
+   if ( ! replace ){
       g_array_append_val(ary, val );
+      dataset_val_set_min_max( wds, col, val );
    } else {
+      double old = g_array_index (ary, double, row );
       g_array_index (ary, double, row ) = val;
+      if ( old == dataset_val_get_min( wds, col ) ||
+           old == dataset_val_get_max( wds, col ) ) {
+         int i;
+         dataset_min_max_init( wds, col );
+         for (i = 0; i < ary->len; i++) {
+            dataset_val_set_min_max( wds, col,
+                                     g_array_index (ary, double, i) );
+         }
+      } else {
+         dataset_val_set_min_max( wds, col, val );
+      }
    }
-
-   dataset_val_set_min_max( wds, col, val );
+   if (row >= 0) {
+      for (int i = 0; i < wds->dvars->len; i++) {
+         WaveVar *dv = (WaveVar *) g_ptr_array_index(wds->dvars, i);
+         dv->cache_nrows = -1;
+      }
+   }
 }
 
 /*
@@ -295,6 +322,14 @@ AppClass *dataset_get_var_for_name(WDataSet *wds, char *varName )
 	 return (AppClass *) var;
       }
    }
+   if ( wds->dvars != NULL ) {
+      for ( i = 0 ; i < wds->dvars->len ; i++ ) {
+         WaveVar *var = (WaveVar *) g_ptr_array_index( wds->dvars, i );
+         if ( app_strcmp( varName, var->varName ) == 0 ){
+            return (AppClass *) var;
+         }
+      }
+   }
    return (AppClass *) NULL;
 }
 
@@ -344,4 +379,3 @@ int dataset_find_row_index( WDataSet *wds, double ival)
    }
    return a;
 }
-

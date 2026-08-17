@@ -1,5 +1,8 @@
 
-SUBDIRS = lib src po
+SUBDIRS = lib src po test
+
+check-smoke:
+	$(MAKE) -C test check-smoke
 
 MOSTLYCLEANFILES = *.log core FILE *~
 CLEANFILES = *.log core FILE *~

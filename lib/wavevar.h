@@ -19,6 +19,10 @@ typedef enum {
         FREQUENCY = 4,
 } VarType;
 
+/* Derived-value modes for complex variables */
+#define WV_DERIVE_NORMAL    0  /* use raw column value (real part for complex) */
+#define WV_DERIVE_MAGNITUDE 1  /* sqrt(re^2 + im^2) */
+#define WV_DERIVE_PHASE_DEG 2  /* atan2(im, re) * 180/pi */
 
 struct _WaveVar {
    AppClass parent;
@@ -27,10 +31,19 @@ struct _WaveVar {
    WDataSet *wds;           /* data for one or more columns */
    int colno;               /* index (column) in WDataSet   */
    int ncols;               /* num cols used by this variable (complex is 2) */
+   int derive_mode;         /* WV_DERIVE_NORMAL, _MAGNITUDE, or _PHASE_DEG */
    AppClass *wvtable;       /* backpointer to the caller Wave var table  */
    int tblno;               /* number of the table containing this var */
    double prev_y2;          /* yval[-2]  temp value              */
    double prev_y1;          /* yval[-1]  temp value              */
+   /* Lazy per-derived-var min/max cache (only meaningful when
+       derive_mode && ncols == 2).  cache_nrows is the dataset row count for
+       which cache_min/cache_max are valid; -1 means invalid.  Appends change
+       nrows; explicit-row writes reset cache_nrows to -1. */
+   int cache_nrows;         /* dataset nrows at which the cache was computed; -1 = invalid */
+   double cache_min;        /* full-column derived min over the sampled rows */
+   double cache_max;        /* full-column derived max over the sampled rows */
+   int cache_scans;         /* number of cache misses this var's refresh has served; 0 initially */
 };
 
 /*
@@ -67,5 +80,21 @@ double wavevar_ivar_get_min(WaveVar *wv );
 
 char *wavevar_type2str( int type);
 int wavevar_str2type( char *s);
+
+WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode);
+
+/* Read-only seam for the derived min/max cache: returns the dataset row count
+   for which a derived var's cache is currently valid, or -1 if invalid (no
+   cache computed yet, or the var is not a derived complex var).  Used by the
+   frozen test harness to prove the cache exists and invalidates on nrows
+   change. */
+int wavevar_derived_cache_valid(WaveVar *wv);
+
+/* Read-only seam for the derived min/max cache miss/rescan count: returns the
+   number of cache misses that wavevar_derived_cache_refresh has served for
+   this var, or 0 when the var is not a derived complex two-column var.  Used by
+   the frozen test harness to prove a cache miss scans once and a hit scans
+   zero times. */
+int wavevar_derived_cache_scans(WaveVar *wv);
 
 #endif /* SPICEVAR_H */

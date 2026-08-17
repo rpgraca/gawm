@@ -148,6 +148,14 @@ static int aio_copyvar( GawIoData *gawio, char *pline )
    char *panel = stu_token_next( &pline, " ", " " );
    char *color = stu_token_next( &pline, " ", " " ); /* stefan */
    
+   /* A missing variable name or panel token means the command is
+      malformed.  Bail with an error instead of dereferencing the NULL
+      token in atoi(panel + 1) below, which otherwise segfaults. */
+   if ( ! varName || ! panel ) {
+      gawio->msg = g_strdup_printf( _("Malformed copyvar command: missing variable name or panel") );
+      return -1;
+   }
+
    int panelno = atoi(panel + 1);
 
    /* stefan */
@@ -183,6 +191,15 @@ static int aio_dataset_add( GawIoData *gawio, char *pline )
 {
    msg_dbg("Fonction called %s", pline );
    char *tok = stu_token_next( &pline, " ", " " );
+
+   /* A missing dataset number token means the command is malformed.
+      Bail with an error instead of dereferencing the NULL token in
+      atoi(tok) below, which otherwise segfaults. */
+   if ( ! tok ) {
+      gawio->msg = g_strdup_printf( _("Malformed dataset command: missing dataset number") );
+      return -1;
+   }
+
    int num = atoi(tok);
    WDataSet *wds;
    
@@ -200,6 +217,15 @@ static int aio_delvar( GawIoData *gawio, char *pline )
    
    char *varName = stu_token_next( &pline, " ", " " );
    char *panel = stu_token_next( &pline, " ", " " );
+
+   /* A missing variable name or panel token means the command is
+      malformed.  Bail with an error instead of dereferencing the NULL
+      token in atoi(panel + 1) below, which otherwise segfaults. */
+   if ( ! varName || ! panel ) {
+      gawio->msg = g_strdup_printf( _("Malformed delvar command: missing variable name or panel") );
+      return -1;
+   }
+
    int panelno = atoi(panel + 1);
    WaveVar *var = ( WaveVar *) dataset_get_var_for_name(gawio->wds, varName );
    WavePanel *wp =  (WavePanel *) g_list_nth_data (ud->ag->panelList, panelno);
@@ -447,7 +473,7 @@ static int aio_get_data( GawIoData *gawio, char *pline )
 
    for (int i = 0; i < nrows; i++) {
       double x = dataset_val_get(gawio->wds, i, 0);
-      double y = dataset_val_get(gawio->wds, i, var->colno);
+      double y = wavevar_val_get(var, i);
       con_fmt_send(gawio->cnx, "%g %g\n", x, y);
    }
    return 0;
@@ -555,11 +581,17 @@ static int aio_get_values_at( GawIoData *gawio, char *pline )
    double xval = g_ascii_strtod(tok, NULL);
    WDataSet *wds = gawio->wds;
    int nvars = wds->numVars - 1; /* skip independent variable */
+   int ndvars = (wds->dvars != NULL) ? (int) wds->dvars->len : 0;
 
-   con_fmt_send(gawio->cnx, "%d\n", nvars);
+   con_fmt_send(gawio->cnx, "%d\n", nvars + ndvars);
    int j;
    for (j = 1; j < wds->numVars; j++) {
       WaveVar *var = (WaveVar *) dataset_get_wavevar(wds, j);
+      double yval = wavevar_interp_value(var, xval);
+      con_fmt_send(gawio->cnx, "%s %.15g\n", var->varName, yval);
+   }
+   for (j = 0; j < ndvars; j++) {
+      WaveVar *var = (WaveVar *) g_ptr_array_index(wds->dvars, j);
       double yval = wavevar_interp_value(var, xval);
       con_fmt_send(gawio->cnx, "%s %.15g\n", var->varName, yval);
    }
@@ -787,4 +819,3 @@ void aio_destroy_channel(UserData *ud)
    ud->gawio = NULL;
    g_free(gawio);
 }
-
