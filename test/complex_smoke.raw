@@ -1,0 +1,14 @@
+Title: gawm current-bugs complex smoke fixture
+Plotname: Transient Analysis
+Flags: complex
+No. Variables: 2
+No. Points: 5
+Variables:
+	0	t	time
+	1	V(out)	voltage
+Values:
+0	0	0	3	4
+1	0.25	0	0	0
+2	0.5	0	-1	1
+3	0.75	0	2	-2
+4	1	0	0	0
