@@ -36,6 +36,13 @@ struct _WaveVar {
    int tblno;               /* number of the table containing this var */
    double prev_y2;          /* yval[-2]  temp value              */
    double prev_y1;          /* yval[-1]  temp value              */
+   /* Lazy per-derived-var min/max cache (only meaningful when
+      derive_mode && ncols == 2).  cache_nrows is the dataset row count for
+      which cache_min/cache_max are valid; -1 means invalid.  Keyed on nrows
+      because gawm appends rows and never mutates existing rows. */
+   int cache_nrows;         /* dataset nrows at which the cache was computed; -1 = invalid */
+   double cache_min;        /* full-column derived min over the sampled rows */
+   double cache_max;        /* full-column derived max over the sampled rows */
 };
 
 /*
@@ -74,5 +81,12 @@ char *wavevar_type2str( int type);
 int wavevar_str2type( char *s);
 
 WaveVar *wavevar_new_derived(WaveVar *src, const char *suffix, int derive_mode);
+
+/* Read-only seam for the derived min/max cache: returns the dataset row count
+   for which a derived var's cache is currently valid, or -1 if invalid (no
+   cache computed yet, or the var is not a derived complex var).  Used by the
+   frozen test harness to prove the cache exists and invalidates on nrows
+   change. */
+int wavevar_derived_cache_valid(WaveVar *wv);
 
 #endif /* SPICEVAR_H */

@@ -18,6 +18,8 @@
 #endif
 
 static double wavevar_derive_value(int derive_mode, double re, double im);
+
+static void wavevar_derived_cache_refresh(WaveVar *var);
         
 
 
@@ -47,6 +49,7 @@ void wavevar_construct( WaveVar *wv, WDataSet *wds, char *varName,
    wv->type = type;
    wv->colno = colno ;
    wv->ncols = ncols ;
+   wv->cache_nrows = -1;   /* derived min/max cache starts invalid */
 }
 
 /** \brief Destructor for the WaveVar object. */
@@ -89,6 +92,46 @@ void wavevar_dup_name(WaveVar *wv, char *varName )
    wv->varName = app_strdup(varName);
 }
 
+/*
+ * Ensure the derived min/max cache is valid for the current dataset nrows.
+ * Only meaningful for complex derived vars (derive_mode && ncols == 2); for
+ * any other var this is a no-op (cache_nrows is left untouched).  Because
+ * gawm appends rows and never mutates existing rows, keying on nrows makes
+ * the cache correct: a nrows change forces a rescan, an unchanged nrows is a
+ * cache hit.
+ */
+static void wavevar_derived_cache_refresh(WaveVar *var)
+{
+   int nrows;
+   int i;
+   double v;
+
+   if (!(var->derive_mode && var->ncols == 2)) {
+      return;
+   }
+   nrows = wavevar_nrows_get(var);
+   if (var->cache_nrows == nrows) {
+      return;   /* cache hit */
+   }
+   if (nrows > 0) {
+      double min_v = G_MAXDOUBLE;
+      double max_v = -G_MAXDOUBLE;
+      for (i = 0; i < nrows; i++) {
+         v = wavevar_val_get(var, i);
+         if (v < min_v) min_v = v;
+         if (v > max_v) max_v = v;
+      }
+      var->cache_min = min_v;
+      var->cache_max = max_v;
+   } else {
+      /* Empty dataset: mark the cache valid at 0 rows so the seam never
+         exposes unwritten min/max to a trust-the-seam reader. */
+      var->cache_min = 0.0;
+      var->cache_max = 0.0;
+   }
+   var->cache_nrows = nrows;
+}
+
 double wavevar_val_get_col_min(WaveVar *var, int col )
 {
    return dataset_val_get_min(var->wds, var->colno + col);
@@ -102,13 +145,8 @@ double wavevar_val_get_col_max(WaveVar *var, int col )
 double wavevar_val_get_min(WaveVar *var )
 {
    if (var->derive_mode && var->ncols == 2) {
-      int nrows = wavevar_nrows_get(var);
-      double min_v = G_MAXDOUBLE;
-      for (int i = 0; i < nrows; i++) {
-         double v = wavevar_val_get(var, i);
-         if (v < min_v) min_v = v;
-      }
-      return (nrows > 0) ? min_v : 0.0;
+      wavevar_derived_cache_refresh(var);
+      return (wavevar_nrows_get(var) > 0) ? var->cache_min : 0.0;
    }
    return wavevar_val_get_col_min(var, 0 );
 }
@@ -116,13 +154,8 @@ double wavevar_val_get_min(WaveVar *var )
 double wavevar_val_get_max(WaveVar *var )
 {
    if (var->derive_mode && var->ncols == 2) {
-      int nrows = wavevar_nrows_get(var);
-      double max_v = -G_MAXDOUBLE;
-      for (int i = 0; i < nrows; i++) {
-         double v = wavevar_val_get(var, i);
-         if (v > max_v) max_v = v;
-      }
-      return (nrows > 0) ? max_v : 0.0;
+      wavevar_derived_cache_refresh(var);
+      return (wavevar_nrows_get(var) > 0) ? var->cache_max : 0.0;
    }
    return wavevar_val_get_col_max(var, 0);
 }
@@ -387,6 +420,25 @@ void wavevar_get_range(WaveVar *dv, double x_start, double x_end, double *y_min,
    if (i_start < 0) i_start = 0;
    if (i_end >= nrows) i_end = nrows - 1;
 
+   /* Full-column fast path for complex derived vars: served from the nrows-
+      keyed min/max cache, folding the two interpolation endpoints exactly as
+      the scan does below.  Partial intervals fall through to the scan so
+      sub-ranges stay correct (cache min/max are whole-column bounds). */
+   if (dv->derive_mode && dv->ncols == 2 && i_start == 0 && i_end == nrows - 1) {
+      wavevar_derived_cache_refresh(dv);
+      min_v = dv->cache_min;
+      max_v = dv->cache_max;
+      val = wavevar_interp_value(dv, x_start);
+      if (val < min_v) min_v = val;
+      if (val > max_v) max_v = val;
+      val = wavevar_interp_value(dv, x_end);
+      if (val < min_v) min_v = val;
+      if (val > max_v) max_v = val;
+      *y_min = min_v;
+      *y_max = max_v;
+      return;
+   }
+
    /* Check points within the interval */
    for (i = i_start; i <= i_end; i++) {
       val = wavevar_val_get(dv, i);
@@ -454,6 +506,21 @@ char *wavevar_type2str( int type)
 {
    return uti_nv_find_in_table_str( type, strtype ,
 				    sizeof( strtype ) / sizeof( strtype[0] ) );
+}
+
+/*
+ * Read-only seam for the derived min/max cache: returns the dataset row count
+ * for which this derived var's cache is currently valid, or -1 if invalid (no
+ * cache computed, or not a derived complex var).  Behaviour-preserving
+ * optimizations have no black-box behavioural signature, so the frozen test
+ * harness uses this to prove a cache exists and invalidates on nrows change.
+ */
+int wavevar_derived_cache_valid(WaveVar *wv)
+{
+   if (!(wv->derive_mode && wv->ncols == 2)) {
+      return -1;
+   }
+   return wv->cache_nrows;
 }
 
 
