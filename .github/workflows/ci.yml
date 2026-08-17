@@ -19,6 +19,7 @@ jobs:
             autoconf \
             automake \
             gettext \
+            autopoint \
             pkg-config \
             libglib2.0-dev \
             libgtk-3-dev \
