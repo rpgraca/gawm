@@ -8,7 +8,8 @@
 #
 # Frozen acceptance:
 #   S1  the Spice3 complex fixture loads and becomes the current table;
-#   S2  `copyvar V(out):mag p0` resolves through gawio and adds the trace;
+#   S2  derived get_data values are correct and `copyvar V(out):mag p0`
+#       resolves through gawio and adds the trace;
 #   S3  the signal tree renders Real, Magnitude, and Phase leaves;
 #   S4  the plotted magnitude autoscales to 5.000 (the raw real max is 3);
 #   S5  gawm remains alive and a non-empty screenshot artifact is retained.
@@ -225,6 +226,7 @@ export GAWM_SMOKE_PORT="$GAWM_PORT"
 export GAWM_SMOKE_FIXTURE="$FIXTURE"
 
 python3 - <<'PY' || exit 1
+import math
 import os
 import socket
 import time
@@ -251,6 +253,22 @@ def expect_ack(check):
     if reply != "\n":
         raise SystemExit(f"{check} FAIL: {reply.rstrip() or 'connection closed'}")
 
+def get_data(name):
+    send(f"get_data {name}")
+    count_line = reader.readline()
+    try:
+        count = int(count_line.strip())
+    except ValueError:
+        raise SystemExit(f"S2 get_data {name} FAIL: {count_line.rstrip()}")
+    rows = []
+    for _ in range(count):
+        fields = reader.readline().split()
+        if len(fields) != 2:
+            raise SystemExit(f"S2 get_data {name} FAIL: malformed row {fields!r}")
+        rows.append((float(fields[0]), float(fields[1])))
+    expect_ack(f"S2 get_data {name}")
+    return rows
+
 send(f"load {fixture}")
 expect_ack("S1 load complex fixture")
 
@@ -265,6 +283,27 @@ expect_ack("S1 table_list")
 if "complex_smoke.raw" not in tables:
     raise SystemExit(f"S1 FAIL: fixture table absent: {tables!r}")
 print("s[ok ] S1 complex fixture loaded")
+
+expected_x = [0.0, 0.25, 0.5, 0.75, 1.0]
+expected_mag = [5.0, 0.0, math.sqrt(2.0), math.sqrt(8.0), 0.0]
+expected_phase = [53.13010235415598, 0.0, 135.0, -45.0, 0.0]
+for name, expected_y in (
+    ("V(out):mag", expected_mag),
+    ("V(out):phase", expected_phase),
+):
+    rows = get_data(name)
+    if len(rows) != len(expected_x):
+        raise SystemExit(f"S2 get_data {name} FAIL: {len(rows)} rows")
+    for index, ((x, y), expected_t, expected_v) in enumerate(
+        zip(rows, expected_x, expected_y)
+    ):
+        if not math.isclose(x, expected_t, rel_tol=1e-9, abs_tol=1e-9):
+            raise SystemExit(f"S2 get_data {name} FAIL: row {index} x={x}")
+        if not math.isclose(y, expected_v, rel_tol=1e-5, abs_tol=1e-5):
+            raise SystemExit(
+                f"S2 get_data {name} FAIL: row {index} y={y}, expected {expected_v}"
+            )
+print("s[ok ] S2 gawio returned derived magnitude/phase values")
 
 send("copyvar V(out):mag p0")
 expect_ack("S2 copyvar V(out):mag")

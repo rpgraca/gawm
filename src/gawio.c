@@ -473,7 +473,7 @@ static int aio_get_data( GawIoData *gawio, char *pline )
 
    for (int i = 0; i < nrows; i++) {
       double x = dataset_val_get(gawio->wds, i, 0);
-      double y = dataset_val_get(gawio->wds, i, var->colno);
+      double y = wavevar_val_get(var, i);
       con_fmt_send(gawio->cnx, "%g %g\n", x, y);
    }
    return 0;
@@ -813,4 +813,3 @@ void aio_destroy_channel(UserData *ud)
    ud->gawio = NULL;
    g_free(gawio);
 }
-

@@ -7,7 +7,7 @@
 # Address/LeakSanitizer:
 #
 #   - The harness constructs a small WDataSet (3 variables / columns, 4
-#     rows), calls dataset_destroy() and exits 0.  The current (unfixed)
+#     rows), calls dataset_destroy() and exits 0.  On the unfixed baseline,
 #     dataset_destroy leaks the wds->vars GPtrArray backing segment (it calls
 #     g_ptr_array_free(vars, FALSE) after dataset_remove_all_vars() already
 #     freed every element, so the ->pdata element array is returned to no one

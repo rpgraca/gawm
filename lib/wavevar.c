@@ -95,10 +95,9 @@ void wavevar_dup_name(WaveVar *wv, char *varName )
 /*
  * Ensure the derived min/max cache is valid for the current dataset nrows.
  * Only meaningful for complex derived vars (derive_mode && ncols == 2); for
- * any other var this is a no-op (cache_nrows is left untouched).  Because
- * gawm appends rows and never mutates existing rows, keying on nrows makes
- * the cache correct: a nrows change forces a rescan, an unchanged nrows is a
- * cache hit.
+ * any other var this is a no-op (cache_nrows is left untouched).  Appends
+ * change nrows; dataset_col_val_add explicitly invalidates the cache for
+ * writes addressed to a specific row.
  */
 static void wavevar_derived_cache_refresh(WaveVar *var)
 {
@@ -522,5 +521,3 @@ int wavevar_derived_cache_valid(WaveVar *wv)
    }
    return wv->cache_nrows;
 }
-
-

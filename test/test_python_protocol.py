@@ -188,3 +188,7 @@ class ProtocolFramingTests(unittest.TestCase):
         server.finish()
 
         self.assertEqual({"x": 2.5, "values": {"V(out)": 3.0}}, result)
+
+
+if __name__ == "__main__":
+    unittest.main()

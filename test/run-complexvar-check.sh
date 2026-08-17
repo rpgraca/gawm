@@ -1,25 +1,20 @@
 #!/bin/sh
-# Acceptance node for the dirty complex-derived-WaveVar patch (checks C1..C9).
+# Acceptance node for complex-derived WaveVars (checks C1..C9).
 #
 # Builds a disposable out-of-tree gawm, compiles AND LINKS only the real
 # lib/libload.a (no GTK/display), then builds the harness
 # test_complexvar_harness.c against it and runs:
 #
 #   1. NORMAL behaviour pass  - runs every C1..C9 check and reports each
-#                              (no early abort).  The current patch is RED on
-#                              C3 (huge magnitude -> inf), C8 (canonical
-#                              names / dataset_get_var_for_name) and C9
-#                              (get-or-create pointer identity).
+#                              (no early abort).
 #   2. Address/LeakSanitizer LIFECYCLE pass - runs `--lifecycle-only`, which
 #                              creates repeated derived WaveVars and destroys
-#                              the dataset.  The current patch leaks every
-#                              derived WaveVar (never tracked/destroyed), so
-#                              LeakSanitizer exits nonzero; a fixed patch must
-#                              be leak-free and exit 0.
+#                              the dataset. The fixed implementation must be
+#                              leak-free and exit 0.
 #
 # The overall command exits 0 ONLY when the normal suite is a clean PASS and
 # the lifecycle pass is leak-free; any fault yields a non-zero exit with an
-# explicit "expected RED / GREEN" verdict.
+# explicit RED / GREEN verdict.
 #
 # Usage: test/run-complexvar-check.sh [SRCDIR]   (SRCDIR defaults to repo root)
 set -u
@@ -219,16 +214,9 @@ if [ "$NORMAL_OK" -eq 1 ] && [ "$LEAK_OK" -eq 1 ]; then
     exit 0
 fi
 
-echo "VERDICT: RED on current dirty patch:"
-[ "$NORMAL_OK" -eq 0 ] && echo "  - normal suite: C3/C8/C9 (or more) not satisfied (expected on current patch)"
+echo "VERDICT: RED:"
+[ "$NORMAL_OK" -eq 0 ] && echo "  - normal suite: one or more C1..C9 checks failed"
 if [ "$LEAK_OK" -eq 0 ]; then
-    echo "  - lifecycle: LeakSanitizer reported leaks (exit $LIFE_STATUS; expected on current patch)"
-    echo "      * derived WaveVars: repeated wavevar_new_derived() objects/names are never"
-    echo "        owned/freed by dataset_destroy (the acceptance target of this node)"
-    echo "      * NOTE: the pre-existing wds->vars container leak (dataset_destroy's"
-    echo "        g_ptr_array_free(vars, FALSE) never freeing ->pdata) is ISOLATED and"
-    echo "        out of scope: the harness ignores that exact allocation via"
-    echo "        __lsan_ignore_object() in lifecycle mode, so it is not a barrier to"
-    echo "        'fixed code zero' and must not force an implementation change."
+    echo "  - lifecycle: LeakSanitizer reported leaks (exit $LIFE_STATUS)"
 fi
 exit 1

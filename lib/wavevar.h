@@ -37,9 +37,9 @@ struct _WaveVar {
    double prev_y2;          /* yval[-2]  temp value              */
    double prev_y1;          /* yval[-1]  temp value              */
    /* Lazy per-derived-var min/max cache (only meaningful when
-      derive_mode && ncols == 2).  cache_nrows is the dataset row count for
-      which cache_min/cache_max are valid; -1 means invalid.  Keyed on nrows
-      because gawm appends rows and never mutates existing rows. */
+       derive_mode && ncols == 2).  cache_nrows is the dataset row count for
+       which cache_min/cache_max are valid; -1 means invalid.  Appends change
+       nrows; explicit-row writes reset cache_nrows to -1. */
    int cache_nrows;         /* dataset nrows at which the cache was computed; -1 = invalid */
    double cache_min;        /* full-column derived min over the sampled rows */
    double cache_max;        /* full-column derived max over the sampled rows */

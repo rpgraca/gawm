@@ -1,6 +1,6 @@
 /*
- * test_complexvar_harness.c - display-free acceptance node for the dirty
- * complex-derived-WaveVar patch (checks C1..C9).
+ * test_complexvar_harness.c - display-free acceptance node for
+ * complex-derived WaveVars (checks C1..C9).
  *
  * Builds WDataSets entirely in memory (no file I/O, no GTK), registers a
  * scalar independent column and a two-column complex variable "V(out)" holding
@@ -23,24 +23,15 @@
  *   C6  derived range over [0,.75] reflects derived values: mag min 0 max 5
  *   C7  a scalar (ncols=1) WaveVar stays raw; derive_mode does not corrupt it
  *   C8  canonical names V(out):mag / V(out):phase and
- *       dataset_get_var_for_name returns those exact pointers (RED today)
+ *       dataset_get_var_for_name returns those exact pointers
  *   C9  repeated wavevar_new_derived for same src+mode returns the same
  *       pointer (get-or-create), and no derived WaveVar is leaked after
- *       dataset_destroy (RED today: pointer identity + LeakSanitizer)
+ *       dataset_destroy
  *
  * Every check is evaluated and reported (no early abort); the process reports
  * a final PASS only when all checks pass.  `--lifecycle-only` runs just the
  * create/destroy lifecycle for LeakSanitizer and returns 0 for a leak-free
  * process (LSan enforces exitcode separately in the runner).
- *
- * In --lifecycle-only under AddressSanitizer, the pre-existing
- * wds->vars GPtrArray backing allocation is explicitly ignored via
- * __lsan_ignore_object() so that LeakSanitizer reports ONLY feature-derived
- * leaks (the WaveVars/names that wavevar_new_derived allocates but that
- * dataset_destroy does not own).  That base container leak (dataset_destroy
- * calls g_ptr_array_free(vars, FALSE), which never frees ->pdata) predates
- * and is unrelated to the derived-WaveVar feature and must not force an
- * implementation change; hence it is carved out here.
  */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -53,13 +44,6 @@
 
 #include <wavevar.h>
 #include <dataset.h>
-
-#if defined(__SANITIZE_ADDRESS__)
-/* Provided by the AddressSanitizer runtime in the ASan/UBSan lifecycle build;
- * the plain (non-ASan) build never references it.  Used only to isolate the
- * pre-existing wds->vars container allocation from feature leak reporting. */
-extern void __lsan_ignore_object(const void *p);
-#endif
 
 static int g_checks = 0;
 static int g_failures = 0;
@@ -190,15 +174,6 @@ main(int argc, char **argv)
          (void) wavevar_new_derived(src, ":mag", WV_DERIVE_MAGNITUDE);
          (void) wavevar_new_derived(src, ":phase", WV_DERIVE_PHASE_DEG);
       }
-
-#if defined(__SANITIZE_ADDRESS__)
-      /* Isolate the pre-existing wds->vars container allocation so the LSan
-         pass reports ONLY the feature-derived WaveVar/name leaks (C9).  This
-         is the exact allocation that dataset_destroy fails to free
-         (g_ptr_array_free(vars, FALSE)); it is out of scope for this feature.
-         Derived WaveVar/name allocations are deliberately NOT ignored. */
-      __lsan_ignore_object(((GPtrArray *) wds->vars)->pdata);
-#endif
 
       dataset_destroy(wds);
       return 0;

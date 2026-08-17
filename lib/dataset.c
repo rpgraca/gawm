@@ -214,11 +214,18 @@ double dataset_val_get_max(WDataSet *wds, int col )
 void dataset_col_val_add (WDataSet *wds, int row, int col, double val)
 {
    GArray *ary = g_ptr_array_index( wds->datas, col );
+   int replace = row >= 0 && row < ary->len;
    
-   if (  row < 0 || row >= ary->len ){
+   if ( ! replace ){
       g_array_append_val(ary, val );
    } else {
       g_array_index (ary, double, row ) = val;
+   }
+   if (row >= 0) {
+      for (int i = 0; i < wds->dvars->len; i++) {
+         WaveVar *dv = (WaveVar *) g_ptr_array_index(wds->dvars, i);
+         dv->cache_nrows = -1;
+      }
    }
 
    dataset_val_set_min_max( wds, col, val );
@@ -361,4 +368,3 @@ int dataset_find_row_index( WDataSet *wds, double ival)
    }
    return a;
 }
-

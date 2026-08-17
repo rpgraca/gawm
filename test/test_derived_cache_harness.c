@@ -1,13 +1,12 @@
 /*
  * test_derived_cache_harness.c - display-free acceptance node for the
- * derived-value min/max/range cache (checks G1..G3).
+ * derived-value min/max/range cache (checks G1..G4).
  *
  * The dirty complex patch rescans the whole dataset every time a derived
  * variable's min/max/range is needed (O(n) per draw on the min/max/range
  * paths).  This unit adds a lazy per-derived-var min/max cache keyed on the
- * dataset row count (gawm appends rows and never mutates existing rows, so an
- * nrows change invalidates, an unchanged nrows is a hit).  It is a
- * behaviour-preserving optimization; because it has NO black-box behavioural
+ * dataset row count, with explicit invalidation for replacement writes. It is
+ * a behaviour-preserving optimization; because it has NO black-box behavioural
  * change, the frozen harness proves the cache exists and invalidates via a
  * dedicated read-only seam `wavevar_derived_cache_valid`, and proves the
  * results stay correct via independent rescan oracles:
@@ -20,6 +19,8 @@
  *       4 (no stale cache).
  *   G3  full-column `get_range` equals cache min/max (folded endpoints) over
  *       the data bounds, and it populates the cache (seam == nrows).
+ *   G4  replacing an existing complex sample invalidates the cache even
+ *       though nrows is unchanged; fresh min/max match a rescan.
  *
  * Every check is evaluated and reported (no early abort); the process reports
  * a final PASS only when all checks pass and the seam/cache is present.
@@ -228,10 +229,39 @@ main(int argc, char **argv)
              "full-column range did not populate cache (RED)");
    }
 
+   /* --- G4: replacement writes invalidate at unchanged nrows ------------ */
+   {
+      static const double rows[] = {
+         0.0, 3.0, 4.0,   /* mag 5  */
+         1.0, 6.0, 8.0,   /* mag 10 */
+      };
+      WDataSet *wds;
+      WaveVar *src, *dmag;
+      double fresh_min, fresh_max;
+
+      wds = build_complex(rows, 2, &src);
+      dmag = wavevar_new_derived(src, ":mag", WV_DERIVE_MAGNITUDE);
+      (void) wavevar_val_get_min(dmag);
+      (void) wavevar_val_get_max(dmag);
+
+      dataset_col_val_add(wds, 0, src->colno, 0.0);
+      dataset_col_val_add(wds, 0, src->colno + 1, 0.0);
+      report("G4 replacement invalidates cache at unchanged nrows",
+             wavevar_derived_cache_valid(dmag) == -1,
+             "cache seam remained valid after in-place write (RED)");
+
+      fresh_min = wavevar_val_get_min(dmag);
+      fresh_max = wavevar_val_get_max(dmag);
+      report("G4 fresh min/max reflect replacement",
+             approx(fresh_min, 0.0, 1e-9, 1e-12) &&
+             approx(fresh_max, 10.0, 1e-9, 1e-12),
+             "stale cache returned pre-replacement extrema (RED)");
+   }
+
    printf("== derived-cache acceptance: %d/%d checks passed ==\n",
           g_checks - g_failures, g_checks);
    if (g_failures == 0) {
-      printf("PASS: derived-cache G1-G3 all satisfied\n");
+      printf("PASS: derived-cache G1-G4 all satisfied\n");
       return 0;
    }
    printf("FAIL: %d check(s) failed\n", g_failures);
