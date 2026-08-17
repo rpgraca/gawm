@@ -269,6 +269,22 @@ def get_data(name):
     expect_ack(f"S2 get_data {name}")
     return rows
 
+def get_values_at(x):
+    send(f"get_values_at {x}")
+    count_line = reader.readline()
+    try:
+        count = int(count_line.strip())
+    except ValueError:
+        raise SystemExit(f"S2 get_values_at FAIL: {count_line.rstrip()}")
+    values = {}
+    for _ in range(count):
+        fields = reader.readline().split()
+        if len(fields) != 2:
+            raise SystemExit(f"S2 get_values_at FAIL: malformed row {fields!r}")
+        values[fields[0]] = float(fields[1])
+    expect_ack("S2 get_values_at")
+    return values
+
 send(f"load {fixture}")
 expect_ack("S1 load complex fixture")
 
@@ -304,6 +320,22 @@ for name, expected_y in (
                 f"S2 get_data {name} FAIL: row {index} y={y}, expected {expected_v}"
             )
 print("s[ok ] S2 gawio returned derived magnitude/phase values")
+
+values = get_values_at(0.625)
+for name, expected in (
+    ("V(out)", 0.5),
+    ("V(out):mag", math.sqrt(0.5)),
+    ("V(out):phase", -45.0),
+):
+    if name not in values or not math.isclose(
+        values[name], expected, rel_tol=1e-5, abs_tol=1e-5
+    ):
+        raise SystemExit(
+            f"S2 get_values_at {name} FAIL: {values.get(name)}, expected {expected}"
+        )
+if len(values) != 3:
+    raise SystemExit(f"S2 get_values_at FAIL: expected 3 values, got {values!r}")
+print("s[ok ] S2 get_values_at includes interpolated derived values")
 
 send("copyvar V(out):mag p0")
 expect_ack("S2 copyvar V(out):mag")

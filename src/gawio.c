@@ -581,11 +581,17 @@ static int aio_get_values_at( GawIoData *gawio, char *pline )
    double xval = g_ascii_strtod(tok, NULL);
    WDataSet *wds = gawio->wds;
    int nvars = wds->numVars - 1; /* skip independent variable */
+   int ndvars = (wds->dvars != NULL) ? (int) wds->dvars->len : 0;
 
-   con_fmt_send(gawio->cnx, "%d\n", nvars);
+   con_fmt_send(gawio->cnx, "%d\n", nvars + ndvars);
    int j;
    for (j = 1; j < wds->numVars; j++) {
       WaveVar *var = (WaveVar *) dataset_get_wavevar(wds, j);
+      double yval = wavevar_interp_value(var, xval);
+      con_fmt_send(gawio->cnx, "%s %.15g\n", var->varName, yval);
+   }
+   for (j = 0; j < ndvars; j++) {
+      WaveVar *var = (WaveVar *) g_ptr_array_index(wds->dvars, j);
       double yval = wavevar_interp_value(var, xval);
       con_fmt_send(gawio->cnx, "%s %.15g\n", var->varName, yval);
    }
